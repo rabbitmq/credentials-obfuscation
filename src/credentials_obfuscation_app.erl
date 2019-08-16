@@ -28,7 +28,7 @@
 -export([passphrase/0]).
 
 start(_StartType, _StartArgs) ->
-    T = ets:new(table_name(), [set, public, named_table]),
+    T = ets:new(table_name(), [set, protected, named_table]),
     ets:insert_new(T, {secret, crypto:strong_rand_bytes(128)}),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
