@@ -21,13 +21,23 @@
 encrypt(none) ->
     none;
 encrypt(Term) ->
-    credentials_obfuscation_pbe:encrypt(
-        credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation_pbe:default_hash(), credentials_obfuscation_pbe:default_iterations(), 
-        credentials_obfuscation_app:passphrase(), Term).
+    case credentials_obfuscation_app:enabled() of
+        true ->
+            credentials_obfuscation_pbe:encrypt(
+                credentials_obfuscation_app:cipher(), credentials_obfuscation_app:hash(), credentials_obfuscation_app:iterations(),
+                credentials_obfuscation_app:passphrase(), Term);
+        false ->
+            Term
+    end.
 
 decrypt(none) ->
     none;
 decrypt(Base64EncryptedBinary) ->
-    credentials_obfuscation_pbe:decrypt(
-        credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation_pbe:default_hash(), credentials_obfuscation_pbe:default_iterations(), 
-        credentials_obfuscation_app:passphrase(), Base64EncryptedBinary).
+    case credentials_obfuscation_app:enabled() of
+        true ->
+            credentials_obfuscation_pbe:decrypt(
+                credentials_obfuscation_app:cipher(), credentials_obfuscation_app:hash(), credentials_obfuscation_app:iterations(), 
+                credentials_obfuscation_app:passphrase(), Base64EncryptedBinary);
+        false ->
+            Base64EncryptedBinary
+    end.

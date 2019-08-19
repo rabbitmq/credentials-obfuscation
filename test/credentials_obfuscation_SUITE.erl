@@ -16,15 +16,60 @@
 
 -module(credentials_obfuscation_SUITE).
 -include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
  
-all() -> [encrypt_decrypt].
+all() -> [encrypt_decrypt, change_default_cipher, disabled, application_failure_for_invalid_cipher].
+
+init_per_testcase(disabled, Config) ->
+    application:set_env(credentials_obfuscation, enabled, false),
+    application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(change_default_cipher, Config) ->
+    %% use weak cipher, to avoid collision with defaults
+    %% defaults should only grow stronger
+    application:set_env(credentials_obfuscation, cipher, aes_128_cbc),
+    application:set_env(credentials_obfuscation, hash, sha256),
+    application:set_env(credentials_obfuscation, iterations, 100),
+    application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(application_failure_for_invalid_cipher, Config) ->
+    application:set_env(credentials_obfuscation, cipher, dummy_cipher),
+    Config;
+init_per_testcase(_TestCase, Config) ->
+    application:ensure_all_started(credentials_obfuscation),
+    Config.
+
+end_per_testcase(_TestCase, Config) ->
+    application:stop(credentials_obfuscation),
+    [application:unset_env(credentials_obfuscation, Key) || {Key, _} <- application:get_all_env(credentials_obfuscation)],
+    Config.
  
 encrypt_decrypt(_Config) ->
-    application:ensure_all_started(credentials_obfuscation),
     Credentials = <<"guest">>,
     Encrypted = credentials_obfuscation:encrypt(Credentials),
-    Credentials = credentials_obfuscation:decrypt(Encrypted),
+    ?assertNotEqual(Credentials, Encrypted),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
     ok.
- 
+
+change_default_cipher(_Config) ->
+    ?assertNotEqual(credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation_app:cipher()),
+    ?assertNotEqual(credentials_obfuscation_pbe:default_hash(), credentials_obfuscation_app:hash()),
+    ?assertNotEqual(credentials_obfuscation_pbe:default_iterations(), credentials_obfuscation_app:iterations()),
+    Credentials = <<"guest">>,
+    Encrypted = credentials_obfuscation:encrypt(Credentials),
+    ?assertNotEqual(Credentials, Encrypted),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
+    ok.
+
+disabled(_Config) ->
+    ?assertNot(credentials_obfuscation_app:enabled()),
+    Credentials = <<"guest">>,
+    ?assertEqual(Credentials, credentials_obfuscation:encrypt(Credentials)),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Credentials)),
+    ok.
+
+application_failure_for_invalid_cipher(_Config) ->
+    {error, _ } = application:ensure_all_started(credentials_obfuscation),
+    ok.
