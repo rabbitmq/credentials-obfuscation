@@ -25,17 +25,32 @@
 -behaviour(supervisor).
 -export([init/1]).
 
--export([passphrase/0]).
+-export([enabled/0, passphrase/0, cipher/0, hash/0, iterations/0]).
 
 start(_StartType, _StartArgs) ->
-    T = ets:new(table_name(), [set, protected, named_table]),
-    ets:insert_new(T, {secret, crypto:strong_rand_bytes(128)}),
+    _ = case enabled() of
+        true ->
+            T = ets:new(table_name(), [set, protected, named_table]),
+            ets:insert_new(T, {secret, crypto:strong_rand_bytes(128)}),
+            %% cipher/decipher attempt to crash now instead of at some awkward moment
+            check();
+        false ->
+            ok
+    end,
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+check() ->
+    Value = <<"dummy">>,
+    Encrypted = credentials_obfuscation:encrypt(Value),
+    Value = credentials_obfuscation:decrypt(Encrypted).
 
 stop(_State) ->
     ok.
 
 init([]) -> {ok, {{one_for_one, 1, 5}, []}}.
+
+enabled() ->
+    application:get_env(credentials_obfuscation, enabled, true).
 
 passphrase() ->
     [{secret, PassPhrase}] = ets:lookup(table_name(), secret),
@@ -43,3 +58,12 @@ passphrase() ->
 
 table_name() ->
     application:get_env(credentials_obfuscation, ets_table_name, credentials_obfuscation).
+
+cipher() ->
+    application:get_env(credentials_obfuscation, cipher, credentials_obfuscation_pbe:default_cipher()).
+
+hash() ->
+    application:get_env(credentials_obfuscation, hash, credentials_obfuscation_pbe:default_hash()).
+
+iterations() ->
+    application:get_env(credentials_obfuscation, iterations, credentials_obfuscation_pbe:default_iterations()).
