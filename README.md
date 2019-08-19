@@ -10,6 +10,8 @@ the Erlang runtime (`error_logger`).
 Note that this application **cannot protect against heap dumping attacks** and only helps
 avoid sensitive data appearing in log files.
 
+## Required OTP Version
+
 ## License and Copyright
 
 (c) 2019 Pivotal Software, Inc.
