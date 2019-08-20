@@ -12,6 +12,8 @@ avoid sensitive data appearing in log files.
 
 ## Required OTP Version
 
+This library requires Erlang/OTP 20.3 or later.
+
 ## License and Copyright
 
 (c) 2019 Pivotal Software, Inc.
