@@ -12,4 +12,6 @@ avoid sensitive data appearing in log files.
 
 ## License and Copyright
 
+See [LICENSE](./LICENSE).
+
 (c) 2019 Pivotal Software, Inc.
