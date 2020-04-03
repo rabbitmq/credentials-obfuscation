@@ -18,8 +18,8 @@
 
 -export([encrypt/1,decrypt/1]).
 
-encrypt(none) ->
-    none;
+encrypt(none) -> none;
+encrypt(undefined) -> undefined;
 encrypt(Term) ->
     case credentials_obfuscation_app:enabled() of
         true ->
@@ -30,8 +30,8 @@ encrypt(Term) ->
             Term
     end.
 
-decrypt(none) ->
-    none;
+decrypt(none) -> none;
+decrypt(undefined) -> undefined;
 decrypt(Base64EncryptedBinary) ->
     case credentials_obfuscation_app:enabled() of
         true ->
