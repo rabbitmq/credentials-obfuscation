@@ -25,13 +25,19 @@
 -behaviour(supervisor).
 -export([init/1]).
 
--export([enabled/0, passphrase/0, cipher/0, hash/0, iterations/0]).
+-export([enabled/0, secret/0, cipher/0, hash/0, iterations/0]).
 
 start(_StartType, _StartArgs) ->
     _ = case enabled() of
         true ->
+            Secret = case application:get_env(credentials_obfuscation, secret) of
+                         undefined ->
+                             crypto:strong_rand_bytes(128);
+                         {ok, S} ->
+                             S
+                     end,
             T = ets:new(table_name(), [set, protected, named_table]),
-            ets:insert_new(T, {secret, crypto:strong_rand_bytes(128)}),
+            ets:insert_new(T, {secret, Secret}),
             %% cipher/decipher attempt to crash now instead of at some awkward moment
             check();
         false ->
@@ -52,9 +58,9 @@ init([]) -> {ok, {{one_for_one, 1, 5}, []}}.
 enabled() ->
     application:get_env(credentials_obfuscation, enabled, true).
 
-passphrase() ->
-    [{secret, PassPhrase}] = ets:lookup(table_name(), secret),
-    PassPhrase.
+secret() ->
+    [{secret, Secret}] = ets:lookup(table_name(), secret),
+    Secret.
 
 table_name() ->
     application:get_env(credentials_obfuscation, ets_table_name, credentials_obfuscation).

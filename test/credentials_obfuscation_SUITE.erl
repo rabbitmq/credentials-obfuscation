@@ -62,7 +62,7 @@ encrypt_decrypt(_Config) ->
     ok.
 
 use_predefined_secret(_Config) ->
-    ?assertEqual(<<"credentials-obfuscation#2">>, credentials_obfuscation_app:passphrase()),
+    ?assertEqual(<<"credentials-obfuscation#2">>, credentials_obfuscation_app:secret()),
     ok.
 
 change_default_cipher(_Config) ->

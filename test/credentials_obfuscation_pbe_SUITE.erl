@@ -25,15 +25,15 @@ encrypt_decrypt(_Config) ->
     Hashes = credentials_obfuscation_pbe:supported_hashes(),
     Ciphers = credentials_obfuscation_pbe:supported_ciphers(),
     %% For each cipher, try to encrypt and decrypt data sizes from 0 to 64 bytes
-    %% with a random passphrase.
+    %% with a random Secret.
     _ = [begin
-             PassPhrase = crypto:strong_rand_bytes(16),
+             Secret = crypto:strong_rand_bytes(16),
              Iterations = rand:uniform(100),
              Data = crypto:strong_rand_bytes(64),
              [begin
                   Expected = binary:part(Data, 0, Len),
-                  Enc = credentials_obfuscation_pbe:encrypt(C, H, Iterations, PassPhrase, Expected),
-                  Expected = iolist_to_binary(credentials_obfuscation_pbe:decrypt(C, H, Iterations, PassPhrase, Enc))
+                  Enc = credentials_obfuscation_pbe:encrypt(C, H, Iterations, Secret, Expected),
+                  Expected = iolist_to_binary(credentials_obfuscation_pbe:decrypt(C, H, Iterations, Secret, Enc))
               end || Len <- lists:seq(0, byte_size(Data))]
          end || H <- Hashes, C <- Ciphers],
     ok.
@@ -57,10 +57,10 @@ encrypt_decrypt_term(_Config) ->
         [<<".*">>, <<".*">>, <<".*">>]
     ],
     _ = [begin
-             PassPhrase = crypto:strong_rand_bytes(16),
+             Secret = crypto:strong_rand_bytes(16),
              Iterations = rand:uniform(100),
-             Enc = credentials_obfuscation_pbe:encrypt_term(C, H, Iterations, PassPhrase, Data),
-             Data = credentials_obfuscation_pbe:decrypt_term(C, H, Iterations, PassPhrase, Enc)
+             Enc = credentials_obfuscation_pbe:encrypt_term(C, H, Iterations, Secret, Data),
+             Data = credentials_obfuscation_pbe:decrypt_term(C, H, Iterations, Secret, Enc)
          end || H <- Hashes, C <- Ciphers, Data <- DataSet],
     ok.
  
