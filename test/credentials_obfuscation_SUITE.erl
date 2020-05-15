@@ -20,10 +20,18 @@
 
 -compile(export_all).
  
-all() -> [encrypt_decrypt, change_default_cipher, disabled, application_failure_for_invalid_cipher].
+all() -> [encrypt_decrypt,
+          use_predefined_secret,
+          change_default_cipher,
+          disabled,
+          application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
     application:set_env(credentials_obfuscation, enabled, false),
+    application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(use_predefined_secret, Config) ->
+    application:set_env(credentials_obfuscation, secret, <<"credentials-obfuscation#2">>),
     application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
@@ -51,6 +59,10 @@ encrypt_decrypt(_Config) ->
     Encrypted = credentials_obfuscation:encrypt(Credentials),
     ?assertNotEqual(Credentials, Encrypted),
     ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
+    ok.
+
+use_predefined_secret(_Config) ->
+    ?assertEqual(<<"credentials-obfuscation#2">>, credentials_obfuscation_app:passphrase()),
     ok.
 
 change_default_cipher(_Config) ->
