@@ -23,6 +23,7 @@
 all() -> [encrypt_decrypt,
           use_predefined_secret,
           use_cookie_as_secret,
+          encryption_happens_only_when_cookie_available,
           change_default_cipher,
           disabled,
           application_failure_for_invalid_cipher].
@@ -36,6 +37,9 @@ init_per_testcase(use_predefined_secret, Config) ->
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(use_cookie_as_secret, Config) ->
+    ok = application:set_env(credentials_obfuscation, secret, cookie),
+    Config;
+init_per_testcase(encryption_happens_only_when_cookie_available, Config) ->
     ok = application:set_env(credentials_obfuscation, secret, cookie),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
@@ -79,10 +83,39 @@ use_cookie_as_secret(_Config) ->
     {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
     Cookie = erlang:get_cookie(),
     ?assertNotEqual(nocookie, Cookie),
-    ct:pal("cookie: ~p", [Cookie]),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     CookieBin = atom_to_binary(Cookie),
     ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
+    ok = net_kernel:stop(),
+    ok.
+
+encryption_happens_only_when_cookie_available(_Config) ->
+    _ = net_kernel:stop(),
+    Uri = "amqp://super:secret@localhost:5672",
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
+
+    ?assertEqual(nocookie, erlang:get_cookie()),
+
+    ?assert(credentials_obfuscation_app:enabled()),
+    ?assertEqual('$pending-cookie', credentials_obfuscation_app:secret()),
+
+    NotReallyEncryptedUri = credentials_obfuscation:encrypt(Uri),
+    ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri),
+    ?assertEqual(Uri, credentials_obfuscation:decrypt(NotReallyEncryptedUri)),
+
+    % start up disterl, which creates a cookie
+    ?assertEqual(nocookie, erlang:get_cookie()),
+    {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
+    Cookie = erlang:get_cookie(),
+    ?assertNotEqual(nocookie, Cookie),
+
+    CookieBin = atom_to_binary(Cookie),
+    ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
+
+    EncryptedUri = credentials_obfuscation:encrypt(Uri),
+    {encrypted, _} = EncryptedUri,
+    ?assertEqual(Uri, credentials_obfuscation:decrypt(EncryptedUri)),
+
     ok = net_kernel:stop(),
     ok.
 
