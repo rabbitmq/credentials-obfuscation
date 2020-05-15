@@ -22,36 +22,45 @@
  
 all() -> [encrypt_decrypt,
           use_predefined_secret,
+          use_cookie_as_secret,
           change_default_cipher,
           disabled,
           application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
-    application:set_env(credentials_obfuscation, enabled, false),
-    application:ensure_all_started(credentials_obfuscation),
+    ok = application:set_env(credentials_obfuscation, enabled, false),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(use_predefined_secret, Config) ->
-    application:set_env(credentials_obfuscation, secret, <<"credentials-obfuscation#2">>),
-    application:ensure_all_started(credentials_obfuscation),
+    ok = application:set_env(credentials_obfuscation, secret, <<"credentials-obfuscation#2">>),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(use_cookie_as_secret, Config) ->
+    ok = application:set_env(credentials_obfuscation, secret, cookie),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
     %% use weak cipher, to avoid collision with defaults
     %% defaults should only grow stronger
-    application:set_env(credentials_obfuscation, cipher, aes_128_cbc),
-    application:set_env(credentials_obfuscation, hash, sha256),
-    application:set_env(credentials_obfuscation, iterations, 100),
-    application:ensure_all_started(credentials_obfuscation),
+    ok = application:set_env(credentials_obfuscation, cipher, aes_128_cbc),
+    ok = application:set_env(credentials_obfuscation, hash, sha256),
+    ok = application:set_env(credentials_obfuscation, iterations, 100),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(application_failure_for_invalid_cipher, Config) ->
-    application:set_env(credentials_obfuscation, cipher, dummy_cipher),
+    ok = application:set_env(credentials_obfuscation, cipher, dummy_cipher),
     Config;
 init_per_testcase(_TestCase, Config) ->
-    application:ensure_all_started(credentials_obfuscation),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config.
 
 end_per_testcase(_TestCase, Config) ->
-    application:stop(credentials_obfuscation),
-    [application:unset_env(credentials_obfuscation, Key) || {Key, _} <- application:get_all_env(credentials_obfuscation)],
+    case application:stop(credentials_obfuscation) of
+        ok ->
+            ok;
+        {error, {not_started, credentials_obfuscation}} ->
+            ok
+    end,
+    [ok = application:unset_env(credentials_obfuscation, Key) || {Key, _} <- application:get_all_env(credentials_obfuscation)],
     Config.
  
 encrypt_decrypt(_Config) ->
@@ -63,6 +72,18 @@ encrypt_decrypt(_Config) ->
 
 use_predefined_secret(_Config) ->
     ?assertEqual(<<"credentials-obfuscation#2">>, credentials_obfuscation_app:secret()),
+    ok.
+
+use_cookie_as_secret(_Config) ->
+    ?assertEqual(nocookie, erlang:get_cookie()),
+    {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
+    Cookie = erlang:get_cookie(),
+    ?assertNotEqual(nocookie, Cookie),
+    ct:pal("cookie: ~p", [Cookie]),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
+    CookieBin = atom_to_binary(Cookie),
+    ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
+    ok = net_kernel:stop(),
     ok.
 
 change_default_cipher(_Config) ->

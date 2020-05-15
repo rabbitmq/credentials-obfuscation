@@ -30,12 +30,7 @@
 start(_StartType, _StartArgs) ->
     _ = case enabled() of
         true ->
-            Secret = case application:get_env(credentials_obfuscation, secret) of
-                         undefined ->
-                             crypto:strong_rand_bytes(128);
-                         {ok, S} ->
-                             S
-                     end,
+            Secret = get_secret(),
             T = ets:new(table_name(), [set, protected, named_table]),
             ets:insert_new(T, {secret, Secret}),
             %% cipher/decipher attempt to crash now instead of at some awkward moment
@@ -73,3 +68,13 @@ hash() ->
 
 iterations() ->
     application:get_env(credentials_obfuscation, iterations, credentials_obfuscation_pbe:default_iterations()).
+
+get_secret() ->
+    case application:get_env(credentials_obfuscation, secret) of
+        {ok, cookie} ->
+            atom_to_binary(erlang:get_cookie());
+        {ok, PredefinedSecret} when is_binary(PredefinedSecret) ->
+            PredefinedSecret;
+        undefined ->
+            crypto:strong_rand_bytes(128)
+    end.
