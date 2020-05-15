@@ -91,13 +91,13 @@ use_cookie_as_secret(_Config) ->
 
 encryption_happens_only_when_cookie_available(_Config) ->
     _ = net_kernel:stop(),
-    Uri = "amqp://super:secret@localhost:5672",
+    Uri = <<"amqp://super:secret@localhost:5672">>,
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
 
     ?assertEqual(nocookie, erlang:get_cookie()),
 
     ?assert(credentials_obfuscation_app:enabled()),
-    ?assertEqual('$pending-cookie', credentials_obfuscation_app:secret()),
+    ?assertEqual('$pending-secret', credentials_obfuscation_app:secret()),
 
     NotReallyEncryptedUri = credentials_obfuscation:encrypt(Uri),
     ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri),

@@ -84,9 +84,13 @@ default_iterations() ->
 
 %% Encryption/decryption of arbitrary Erlang terms.
 
+encrypt_term(_Cipher, _Hash, _Iterations, '$pending-secret', Term) ->
+    {plaintext, Term};
 encrypt_term(Cipher, Hash, Iterations, Secret, Term) ->
     encrypt(Cipher, Hash, Iterations, Secret, term_to_binary(Term)).
 
+decrypt_term(_Cipher, _Hash, _Iterations, _Secret, {plaintext, Term}) ->
+    Term;
 decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
     binary_to_term(decrypt(Cipher, Hash, Iterations, Secret, Base64Binary)).
 
@@ -100,16 +104,21 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
 
 -spec encrypt(crypto:block_cipher(), crypto:hash_algorithms(),
     pos_integer(), iodata(), binary()) -> binary().
-encrypt(Cipher, Hash, Iterations, Secret, ClearText) ->
+encrypt(_Cipher, _Hash, _Iterations, '$pending-secret', ClearText) ->
+    {plaintext, ClearText};
+encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) ->
     Salt = crypto:strong_rand_bytes(16),
     Ivec = crypto:strong_rand_bytes(iv_length(Cipher)),
     Key = make_key(Cipher, Hash, Iterations, Secret, Salt),
     Binary = crypto:block_encrypt(Cipher, Key, Ivec, pad(Cipher, ClearText)),
-    base64:encode(<< Salt/binary, Ivec/binary, Binary/binary >>).
+    Encrypted = base64:encode(<<Salt/binary, Ivec/binary, Binary/binary>>),
+    {encrypted, Encrypted}.
 
 -spec decrypt(crypto:block_cipher(), crypto:hash_algorithms(),
     pos_integer(), iodata(), binary()) -> binary().
-decrypt(Cipher, Hash, Iterations, Secret, Base64Binary) ->
+decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, Binary}) ->
+    Binary;
+decrypt(Cipher, Hash, Iterations, Secret, {encrypted, Base64Binary}) ->
     IvLength = iv_length(Cipher),
     << Salt:16/binary, Ivec:IvLength/binary, Binary/bits >> = base64:decode(Base64Binary),
     Key = make_key(Cipher, Hash, Iterations, Secret, Salt),
