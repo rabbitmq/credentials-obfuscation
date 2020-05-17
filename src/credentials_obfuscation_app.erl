@@ -31,7 +31,6 @@ start(_StartType, _StartArgs) ->
     ok = case enabled() of
              true ->
                  Secret = get_secret(),
-                 %% TODO change table back to protected
                  T = ets:new(table_name(), [set, public, named_table]),
                  ets:insert_new(T, {secret, Secret}),
                  %% cipher/decipher attempt to crash now instead of at some awkward moment
@@ -71,13 +70,13 @@ hash() ->
 iterations() ->
     application:get_env(credentials_obfuscation, iterations, credentials_obfuscation_pbe:default_iterations()).
 
-maybe_update_secret([{secret, '$pending-secret'}]) ->
+maybe_update_secret([{secret, '$pending-secret'=Pending}]) ->
     case get_secret() of
-        '$pending-secret' = Pending ->
+        Pending ->
             Pending;
-        Secret ->
-            ets:insert(table_name(), {secret, Secret}),
-            Secret
+        UpdatedSecret ->
+            ets:insert(table_name(), {secret, UpdatedSecret}),
+            UpdatedSecret
     end;
 maybe_update_secret([{secret, Secret}]) ->
     Secret.

@@ -80,6 +80,10 @@ use_predefined_secret(_Config) ->
 
 use_cookie_as_secret(_Config) ->
     ?assertEqual(nocookie, erlang:get_cookie()),
+
+    %% Start epmd
+    os:cmd("epmd -daemon"),
+
     {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
     Cookie = erlang:get_cookie(),
     ?assertNotEqual(nocookie, Cookie),
@@ -103,8 +107,10 @@ encryption_happens_only_when_cookie_available(_Config) ->
     ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri),
     ?assertEqual(Uri, credentials_obfuscation:decrypt(NotReallyEncryptedUri)),
 
+    %% Start epmd
+    os:cmd("epmd -daemon"),
+
     % start up disterl, which creates a cookie
-    ?assertEqual(nocookie, erlang:get_cookie()),
     {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
     Cookie = erlang:get_cookie(),
     ?assertNotEqual(nocookie, Cookie),
