@@ -22,6 +22,13 @@ CookieBin = atom_to_binary(erlang:get_cookie(), latin1)),
 credentials_obfuscation:set_secret(CookieBin)
 ```
 
+To use a random value, do the following:
+
+```
+Bytes = crypto:strong_rand_bytes(128),
+credentials_obfuscation:set_secret(Bytes)
+```
+
 ## License and Copyright
 
 See [LICENSE](./LICENSE).
