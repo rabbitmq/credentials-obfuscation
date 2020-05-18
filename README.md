@@ -10,6 +10,18 @@ the Erlang runtime (`error_logger`).
 Note that this application **cannot protect against heap dumping attacks** and only helps
 avoid sensitive data appearing in log files.
 
+# Usage
+
+First, make the `credentials_obfuscation` application a dependency of your project.
+
+Then, during the start-up of your application, and after the `credentials_obfuscation` application starts, provide the secret value:
+
+
+```
+CookieBin = atom_to_binary(erlang:get_cookie(), latin1)),
+credentials_obfuscation:set_secret(CookieBin)
+```
+
 ## License and Copyright
 
 See [LICENSE](./LICENSE).
