@@ -25,36 +25,38 @@
 -behaviour(supervisor).
 -export([init/1]).
 
--export([enabled/0, passphrase/0, cipher/0, hash/0, iterations/0]).
+-export([enabled/0, secret/0, cipher/0, hash/0, iterations/0]).
 
 start(_StartType, _StartArgs) ->
-    _ = case enabled() of
-        true ->
-            T = ets:new(table_name(), [set, protected, named_table]),
-            ets:insert_new(T, {secret, crypto:strong_rand_bytes(128)}),
-            %% cipher/decipher attempt to crash now instead of at some awkward moment
-            check();
-        false ->
-            ok
-    end,
+    ok = case enabled() of
+             true ->
+                 Secret = get_secret(),
+                 T = ets:new(table_name(), [set, public, named_table]),
+                 ets:insert_new(T, {secret, Secret}),
+                 %% cipher/decipher attempt to crash now instead of at some awkward moment
+                 check();
+             false ->
+                 ok
+         end,
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 check() ->
     Value = <<"dummy">>,
     Encrypted = credentials_obfuscation:encrypt(Value),
-    Value = credentials_obfuscation:decrypt(Encrypted).
+    Value = credentials_obfuscation:decrypt(Encrypted),
+    ok.
 
 stop(_State) ->
     ok.
 
-init([]) -> {ok, {{one_for_one, 1, 5}, []}}.
+init([]) ->
+    {ok, {{one_for_one, 1, 5}, []}}.
 
 enabled() ->
     application:get_env(credentials_obfuscation, enabled, true).
 
-passphrase() ->
-    [{secret, PassPhrase}] = ets:lookup(table_name(), secret),
-    PassPhrase.
+secret() ->
+    maybe_update_secret(ets:lookup(table_name(), secret)).
 
 table_name() ->
     application:get_env(credentials_obfuscation, ets_table_name, credentials_obfuscation).
@@ -67,3 +69,29 @@ hash() ->
 
 iterations() ->
     application:get_env(credentials_obfuscation, iterations, credentials_obfuscation_pbe:default_iterations()).
+
+maybe_update_secret([{secret, '$pending-secret'=Pending}]) ->
+    case get_secret() of
+        Pending ->
+            Pending;
+        UpdatedSecret ->
+            ets:insert(table_name(), {secret, UpdatedSecret}),
+            UpdatedSecret
+    end;
+maybe_update_secret([{secret, Secret}]) ->
+    Secret.
+
+get_secret() ->
+    case application:get_env(credentials_obfuscation, secret) of
+        {ok, cookie} ->
+            case erlang:get_cookie() of
+                nocookie ->
+                    '$pending-secret';
+                Cookie ->
+                    atom_to_binary(Cookie, utf8)
+            end;
+        {ok, PredefinedSecret} when is_binary(PredefinedSecret) ->
+            PredefinedSecret;
+        undefined ->
+            crypto:strong_rand_bytes(128)
+    end.

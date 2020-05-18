@@ -25,7 +25,7 @@ encrypt(Term) ->
         true ->
             credentials_obfuscation_pbe:encrypt(
                 credentials_obfuscation_app:cipher(), credentials_obfuscation_app:hash(), credentials_obfuscation_app:iterations(),
-                credentials_obfuscation_app:passphrase(), Term);
+                credentials_obfuscation_app:secret(), Term);
         false ->
             Term
     end.
@@ -37,7 +37,7 @@ decrypt(Base64EncryptedBinary) ->
         true ->
             credentials_obfuscation_pbe:decrypt(
                 credentials_obfuscation_app:cipher(), credentials_obfuscation_app:hash(), credentials_obfuscation_app:iterations(), 
-                credentials_obfuscation_app:passphrase(), Base64EncryptedBinary);
+                credentials_obfuscation_app:secret(), Base64EncryptedBinary);
         false ->
             Base64EncryptedBinary
     end.
