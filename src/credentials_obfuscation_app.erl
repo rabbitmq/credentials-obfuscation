@@ -88,7 +88,7 @@ get_secret() ->
                 nocookie ->
                     '$pending-secret';
                 Cookie ->
-                    atom_to_binary(Cookie)
+                    atom_to_binary(Cookie, utf8)
             end;
         {ok, PredefinedSecret} when is_binary(PredefinedSecret) ->
             PredefinedSecret;

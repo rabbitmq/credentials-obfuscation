@@ -88,7 +88,7 @@ use_cookie_as_secret(_Config) ->
     Cookie = erlang:get_cookie(),
     ?assertNotEqual(nocookie, Cookie),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
-    CookieBin = atom_to_binary(Cookie),
+    CookieBin = atom_to_binary(Cookie, utf8),
     ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
     ok = net_kernel:stop(),
     ok.
@@ -115,7 +115,7 @@ encryption_happens_only_when_cookie_available(_Config) ->
     Cookie = erlang:get_cookie(),
     ?assertNotEqual(nocookie, Cookie),
 
-    CookieBin = atom_to_binary(Cookie),
+    CookieBin = atom_to_binary(Cookie, utf8),
     ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
 
     EncryptedUri = credentials_obfuscation:encrypt(Uri),
