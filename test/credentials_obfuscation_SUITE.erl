@@ -23,13 +23,18 @@
 all() -> [encrypt_decrypt,
           use_predefined_secret,
           use_cookie_as_secret,
-          encryption_happens_only_when_cookie_available,
+          encryption_happens_only_when_secret_available,
           change_default_cipher,
           disabled,
+          refresh_configuration,
           application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
     ok = application:set_env(credentials_obfuscation, enabled, false),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(refresh_configuration, Config) ->
+    ok = application:set_env(credentials_obfuscation, enabled, true),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(use_predefined_secret, Config) ->
@@ -39,8 +44,8 @@ init_per_testcase(use_predefined_secret, Config) ->
 init_per_testcase(use_cookie_as_secret, Config) ->
     ok = application:set_env(credentials_obfuscation, secret, cookie),
     Config;
-init_per_testcase(encryption_happens_only_when_cookie_available, Config) ->
-    ok = application:set_env(credentials_obfuscation, secret, cookie),
+init_per_testcase(encryption_happens_only_when_secret_available, Config) ->
+    ok = application:set_env(credentials_obfuscation, enabled, true),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
     %% use weak cipher, to avoid collision with defaults
@@ -55,6 +60,8 @@ init_per_testcase(application_failure_for_invalid_cipher, Config) ->
     Config;
 init_per_testcase(_TestCase, Config) ->
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
+    Secret = crypto:strong_rand_bytes(128),
+    ok = credentials_obfuscation:set_secret(Secret),
     Config.
 
 end_per_testcase(_TestCase, Config) ->
@@ -75,10 +82,13 @@ encrypt_decrypt(_Config) ->
     ok.
 
 use_predefined_secret(_Config) ->
-    ?assertEqual(<<"credentials-obfuscation#2">>, credentials_obfuscation_app:secret()),
+    Secret = crypto:strong_rand_bytes(128),
+    ok = credentials_obfuscation:set_secret(Secret),
+    ?assertEqual(Secret, credentials_obfuscation:secret()),
     ok.
 
 use_cookie_as_secret(_Config) ->
+    _ = net_kernel:stop(),
     ?assertEqual(nocookie, erlang:get_cookie()),
 
     %% Start epmd
@@ -89,19 +99,20 @@ use_cookie_as_secret(_Config) ->
     ?assertNotEqual(nocookie, Cookie),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     CookieBin = atom_to_binary(Cookie, utf8),
-    ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
+    ok = credentials_obfuscation:set_secret(CookieBin),
+    ?assertEqual(CookieBin, credentials_obfuscation:secret()),
     ok = net_kernel:stop(),
     ok.
 
-encryption_happens_only_when_cookie_available(_Config) ->
+encryption_happens_only_when_secret_available(_Config) ->
     _ = net_kernel:stop(),
     Uri = <<"amqp://super:secret@localhost:5672">>,
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
 
     ?assertEqual(nocookie, erlang:get_cookie()),
 
-    ?assert(credentials_obfuscation_app:enabled()),
-    ?assertEqual('$pending-secret', credentials_obfuscation_app:secret()),
+    ?assert(credentials_obfuscation:enabled()),
+    ?assertEqual('$pending-secret', credentials_obfuscation:secret()),
 
     NotReallyEncryptedUri = credentials_obfuscation:encrypt(Uri),
     ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri),
@@ -116,7 +127,8 @@ encryption_happens_only_when_cookie_available(_Config) ->
     ?assertNotEqual(nocookie, Cookie),
 
     CookieBin = atom_to_binary(Cookie, utf8),
-    ?assertEqual(CookieBin, credentials_obfuscation_app:secret()),
+    ok = credentials_obfuscation:set_secret(CookieBin),
+    ?assertEqual(CookieBin, credentials_obfuscation:secret()),
 
     EncryptedUri = credentials_obfuscation:encrypt(Uri),
     {encrypted, _} = EncryptedUri,
@@ -126,9 +138,9 @@ encryption_happens_only_when_cookie_available(_Config) ->
     ok.
 
 change_default_cipher(_Config) ->
-    ?assertNotEqual(credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation_app:cipher()),
-    ?assertNotEqual(credentials_obfuscation_pbe:default_hash(), credentials_obfuscation_app:hash()),
-    ?assertNotEqual(credentials_obfuscation_pbe:default_iterations(), credentials_obfuscation_app:iterations()),
+    ?assertNotEqual(credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation:cipher()),
+    ?assertNotEqual(credentials_obfuscation_pbe:default_hash(), credentials_obfuscation:hash()),
+    ?assertNotEqual(credentials_obfuscation_pbe:default_iterations(), credentials_obfuscation:iterations()),
     Credentials = <<"guest">>,
     Encrypted = credentials_obfuscation:encrypt(Credentials),
     ?assertNotEqual(Credentials, Encrypted),
@@ -136,12 +148,22 @@ change_default_cipher(_Config) ->
     ok.
 
 disabled(_Config) ->
-    ?assertNot(credentials_obfuscation_app:enabled()),
+    ?assertNot(credentials_obfuscation:enabled()),
     Credentials = <<"guest">>,
     ?assertEqual(Credentials, credentials_obfuscation:encrypt(Credentials)),
     ?assertEqual(Credentials, credentials_obfuscation:decrypt(Credentials)),
     ok.
 
+refresh_configuration(_Config) ->
+    ?assert(credentials_obfuscation:enabled()),
+    ok = application:set_env(credentials_obfuscation, enabled, false),
+    ok = credentials_obfuscation:refresh_config(),
+    ?assertNot(credentials_obfuscation:enabled()),
+    Value = <<"foobarbazbat">>,
+    ?assertEqual(Value, credentials_obfuscation:encrypt(Value)),
+    ?assertEqual(Value, credentials_obfuscation:decrypt(Value)),
+    ok.
+
 application_failure_for_invalid_cipher(_Config) ->
-    {error, _ } = application:ensure_all_started(credentials_obfuscation),
+    {error, _} = application:ensure_all_started(credentials_obfuscation),
     ok.

@@ -16,6 +16,8 @@
 
 -module(credentials_obfuscation_pbe).
 
+-include("credentials_obfuscation.hrl").
+
 -export([supported_ciphers/0, supported_hashes/0, default_cipher/0, default_hash/0, default_iterations/0]).
 -export([encrypt_term/5, decrypt_term/5]).
 -export([encrypt/5, decrypt/5]).
@@ -84,7 +86,7 @@ default_iterations() ->
 
 %% Encryption/decryption of arbitrary Erlang terms.
 
-encrypt_term(_Cipher, _Hash, _Iterations, '$pending-secret', Term) ->
+encrypt_term(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, Term) ->
     {plaintext, Term};
 encrypt_term(Cipher, Hash, Iterations, Secret, Term) ->
     encrypt(Cipher, Hash, Iterations, Secret, term_to_binary(Term)).
@@ -104,7 +106,7 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
 
 -spec encrypt(crypto:block_cipher(), crypto:hash_algorithms(),
               pos_integer(), iodata(), binary()) -> {plaintext, binary()} | {encrypted, binary()}.
-encrypt(_Cipher, _Hash, _Iterations, '$pending-secret', ClearText) ->
+encrypt(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, ClearText) ->
     {plaintext, ClearText};
 encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) ->
     Salt = crypto:strong_rand_bytes(16),
@@ -115,9 +117,9 @@ encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) -
     {encrypted, Encrypted}.
 
 -spec decrypt(crypto:block_cipher(), crypto:hash_algorithms(),
-              pos_integer(), iodata(), binary()) -> binary().
-decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, Binary}) ->
-    Binary;
+              pos_integer(), iodata(), {'encrypted', binary() | [1..255]} | {'plaintext', _}) -> any().
+decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, ClearText}) ->
+    ClearText;
 decrypt(Cipher, Hash, Iterations, Secret, {encrypted, Base64Binary}) ->
     IvLength = iv_length(Cipher),
     << Salt:16/binary, Ivec:IvLength/binary, Binary/bits >> = base64:decode(Base64Binary),
