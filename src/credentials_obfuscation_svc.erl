@@ -89,7 +89,7 @@ handle_call({get_config, secret}, _From, #state{secret=Secret}=State) ->
 handle_call(refresh_config, _From, State0) ->
     {ok, State1} = refresh_config(State0),
     {reply, ok, State1};
-handle_call({_Request, Term}, _From, #state{enabled=false}=State) ->
+handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
     {reply, Term, State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
@@ -97,6 +97,8 @@ handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            secret=Secret}=State) ->
     Encrypted = credentials_obfuscation_pbe:encrypt(Cipher, Hash, Iterations, Secret, Term),
     {reply, Encrypted, State};
+handle_call({decrypt, Term}, _From, #state{enabled=false}=State) ->
+    {reply, Term, State};
 handle_call({decrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
@@ -119,7 +121,8 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
--spec init_state() -> #state{}.
+
+-spec init_state() ->  {'ok', #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::pos_integer(), secret::'$pending-secret'}}.
 init_state() ->
     {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
     ok = check(Cipher, Hash, Iterations),
@@ -127,7 +130,8 @@ init_state() ->
                    iterations = Iterations, secret = ?PENDING_SECRET},
     {ok, State}.
 
--spec refresh_config(#state{}) -> #state{}.
+-spec refresh_config(#state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}) ->
+    {'ok', #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}}.
 refresh_config(#state{secret=Secret}=State0) ->
     {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
     ok = case Enabled of

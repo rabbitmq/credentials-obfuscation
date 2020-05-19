@@ -22,24 +22,29 @@
 %% API
 -export([set_secret/1, encrypt/1, decrypt/1, refresh_config/0]).
 
+-spec enabled() -> boolean().
 enabled() ->
     credentials_obfuscation_svc:get_config(enabled).
 
+-spec cipher() -> atom().
 cipher() ->
     credentials_obfuscation_svc:get_config(cipher).
 
+-spec hash() -> atom().
 hash() ->
     credentials_obfuscation_svc:get_config(hash).
 
+-spec iterations() -> non_neg_integer().
 iterations() ->
     credentials_obfuscation_svc:get_config(iterations).
 
+-spec secret() -> binary() | '$pending-secret'.
 secret() ->
     credentials_obfuscation_svc:get_config(secret).
 
 -spec set_secret(binary()) -> ok.
 set_secret(Secret) when is_binary(Secret) ->
-    credentials_obfuscation_svc:set_secret(Secret).
+    ok = credentials_obfuscation_svc:set_secret(Secret).
 
 -spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
 encrypt(none) -> none;

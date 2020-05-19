@@ -117,9 +117,9 @@ encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) -
     {encrypted, Encrypted}.
 
 -spec decrypt(crypto:block_cipher(), crypto:hash_algorithms(),
-              pos_integer(), iodata(), binary()) -> binary().
-decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, Binary}) ->
-    Binary;
+              pos_integer(), iodata(), {'encrypted', binary() | [1..255]} | {'plaintext', _}) -> any().
+decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, ClearText}) ->
+    ClearText;
 decrypt(Cipher, Hash, Iterations, Secret, {encrypted, Base64Binary}) ->
     IvLength = iv_length(Cipher),
     << Salt:16/binary, Ivec:IvLength/binary, Binary/bits >> = base64:decode(Base64Binary),
