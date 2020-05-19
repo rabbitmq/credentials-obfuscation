@@ -26,10 +26,15 @@ all() -> [encrypt_decrypt,
           encryption_happens_only_when_secret_available,
           change_default_cipher,
           disabled,
+          refresh_configuration,
           application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
     ok = application:set_env(credentials_obfuscation, enabled, false),
+    {ok, _} = application:ensure_all_started(credentials_obfuscation),
+    Config;
+init_per_testcase(refresh_configuration, Config) ->
+    ok = application:set_env(credentials_obfuscation, enabled, true),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
 init_per_testcase(use_predefined_secret, Config) ->
@@ -147,6 +152,16 @@ disabled(_Config) ->
     Credentials = <<"guest">>,
     ?assertEqual(Credentials, credentials_obfuscation:encrypt(Credentials)),
     ?assertEqual(Credentials, credentials_obfuscation:decrypt(Credentials)),
+    ok.
+
+refresh_configuration(_Config) ->
+    ?assert(credentials_obfuscation:enabled()),
+    ok = application:set_env(credentials_obfuscation, enabled, false),
+    ok = credentials_obfuscation:refresh_config(),
+    ?assertNot(credentials_obfuscation:enabled()),
+    Value = <<"foobarbazbat">>,
+    ?assertEqual(Value, credentials_obfuscation:encrypt(Value)),
+    ?assertEqual(Value, credentials_obfuscation:decrypt(Value)),
     ok.
 
 application_failure_for_invalid_cipher(_Config) ->

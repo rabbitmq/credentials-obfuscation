@@ -20,7 +20,7 @@
 -export([enabled/0, cipher/0, hash/0, iterations/0, secret/0]).
 
 %% API
--export([set_secret/1, encrypt/1, decrypt/1]).
+-export([set_secret/1, encrypt/1, decrypt/1, refresh_config/0]).
 
 enabled() ->
     credentials_obfuscation_svc:get_config(enabled).
@@ -52,3 +52,7 @@ decrypt(none) -> none;
 decrypt(undefined) -> undefined;
 decrypt(Term) ->
     credentials_obfuscation_svc:decrypt(Term).
+
+-spec refresh_config() -> ok.
+refresh_config() ->
+    credentials_obfuscation_svc:refresh_config().

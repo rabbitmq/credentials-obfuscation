@@ -21,7 +21,12 @@
 -include("credentials_obfuscation.hrl").
 
 %% API functions
--export([start_link/0, get_config/1,  set_secret/1, encrypt/1, decrypt/1]).
+-export([start_link/0,
+         get_config/1,
+         refresh_config/0,
+         set_secret/1,
+         encrypt/1,
+         decrypt/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -48,6 +53,10 @@ start_link() ->
 get_config(Config) ->
     gen_server:call(?MODULE, {get_config, Config}).
 
+-spec refresh_config() -> ok.
+refresh_config() ->
+    gen_server:call(?MODULE, refresh_config).
+
 -spec set_secret(binary()) -> ok.
 set_secret(Secret) when is_binary(Secret) ->
     gen_server:call(?MODULE, {set_secret, Secret}).
@@ -65,8 +74,7 @@ decrypt(Term) ->
 %%%===================================================================
 
 init([]) ->
-    State = init_state(),
-    {ok, State}.
+    init_state().
 
 handle_call({get_config, enabled}, _From, #state{enabled=Enabled}=State) ->
     {reply, Enabled, State};
@@ -78,6 +86,9 @@ handle_call({get_config, iterations}, _From, #state{iterations=Iterations}=State
     {reply, Iterations, State};
 handle_call({get_config, secret}, _From, #state{secret=Secret}=State) ->
     {reply, Secret, State};
+handle_call(refresh_config, _From, State0) ->
+    {ok, State1} = refresh_config(State0),
+    {reply, ok, State1};
 handle_call({_Request, Term}, _From, #state{enabled=false}=State) ->
     {reply, Term, State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
@@ -110,6 +121,24 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec init_state() -> #state{}.
 init_state() ->
+    {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
+    ok = check(Cipher, Hash, Iterations),
+    State = #state{enabled = Enabled, cipher = Cipher, hash = Hash,
+                   iterations = Iterations, secret = ?PENDING_SECRET},
+    {ok, State}.
+
+-spec refresh_config(#state{}) -> #state{}.
+refresh_config(#state{secret=Secret}=State0) ->
+    {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
+    ok = case Enabled of
+             true -> check(Cipher, Hash, Iterations);
+             false -> ok
+         end,
+    State1 = State0#state{enabled = Enabled, cipher = Cipher, hash = Hash,
+                          iterations = Iterations, secret = Secret},
+    {ok, State1}.
+
+get_config_values() ->
     Enabled = application:get_env(credentials_obfuscation, enabled, true),
     Cipher = application:get_env(credentials_obfuscation, cipher,
                                  credentials_obfuscation_pbe:default_cipher()),
@@ -117,9 +146,7 @@ init_state() ->
                                credentials_obfuscation_pbe:default_hash()),
     Iterations = application:get_env(credentials_obfuscation, iterations,
                                      credentials_obfuscation_pbe:default_iterations()),
-    ok = check(Cipher, Hash, Iterations),
-    #state{enabled = Enabled, cipher = Cipher, hash = Hash,
-           iterations = Iterations, secret = ?PENDING_SECRET}.
+    {ok, Enabled, Cipher, Hash, Iterations}.
 
 check(Cipher, Hash, Iterations) ->
     Value = <<"dummy">>,
