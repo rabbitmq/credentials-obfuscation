@@ -1,7 +1,7 @@
 # Credential Obfuscator
 
-This is a small library OTP application that acts as a help. It encrypts and decrypts sensitive data
-typically stored in processes state with a one-off key (key material is generated on node start).
+This is a small library OTP application that acts as a helper. It encrypts and decrypts sensitive data
+typically stored in processes state with a one-off key (key material must be provided on node start).
 One example of such sensitive data is credentials used to access remote services.
 
 This is necessary to avoid the sensitive values logged when process state is dumped by
