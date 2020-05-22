@@ -33,4 +33,4 @@ credentials_obfuscation:set_secret(Bytes)
 
 See [LICENSE](./LICENSE).
 
-(c) 2019-2020 Vmware, Inc or its affiliates.
+(c) 2019-2020 VMware, Inc or its affiliates.
