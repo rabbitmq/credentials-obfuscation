@@ -105,7 +105,7 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
 %% function accepts that same base64 binary.
 
 -spec encrypt(crypto:block_cipher(), crypto:hash_algorithms(),
-              pos_integer(), iodata(), binary()) -> {plaintext, binary()} | {encrypted, binary()}.
+              pos_integer(), iodata() | '$pending-secret', binary()) -> {plaintext, binary()} | {encrypted, binary()}.
 encrypt(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, ClearText) ->
     {plaintext, ClearText};
 encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) ->
