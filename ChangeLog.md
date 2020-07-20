@@ -1,6 +1,10 @@
 # Change Log
 
-## Changes Between 2.0.0 and 2.1.0
+## Changes Between 2.1.0 and 2.2.0 (in development)
+
+No changes yet.
+
+## Changes Between 2.0.0 and 2.1.0 (July 20th, 2020)
 
 ### License Change
 
