@@ -18,7 +18,7 @@ Then, during the start-up of your application, and after the `credentials_obfusc
 
 
 ```
-CookieBin = atom_to_binary(erlang:get_cookie(), latin1)),
+CookieBin = atom_to_binary(erlang:get_cookie(), latin1),
 credentials_obfuscation:set_secret(CookieBin)
 ```
 
