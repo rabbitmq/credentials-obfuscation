@@ -33,6 +33,8 @@
                 iterations :: non_neg_integer(),
                 secret :: binary() | '$pending-secret'}).
 
+-define(TIMEOUT, 30000).
+
 %%%===================================================================
 %%% API functions
 %%%===================================================================
@@ -54,11 +56,23 @@ set_secret(Secret) when is_binary(Secret) ->
 
 -spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
 encrypt(Term) ->
-    gen_server:call(?MODULE, {encrypt, Term}).
+    try
+        gen_server:call(?MODULE, {encrypt, Term}, ?TIMEOUT)
+    catch exit:{timeout, _} ->
+            %% We treat timeouts the same way we do other "encryption is impossible"
+            %% scenarios: return the original value. This won't be acceptable to every user
+            %% but might be to some. There is no right or wrong answer to whether
+            %% availability or security are more important, so the users have to decide
+            %% whether using {plaintext, Term} results is appropriate in their specific case.
+            {plaintext, Term};
+          _:_ ->
+            %% see above
+            {plaintext, Term}
+    end.
 
 -spec decrypt({plaintext, term()} | {encrypted, binary()}) -> term().
 decrypt(Term) ->
-    gen_server:call(?MODULE, {decrypt, Term}).
+    gen_server:call(?MODULE, {decrypt, Term}, ?TIMEOUT).
 
 %%%===================================================================
 %%% gen_server callbacks
