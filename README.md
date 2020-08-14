@@ -29,7 +29,7 @@ Bytes = crypto:strong_rand_bytes(128),
 credentials_obfuscation:set_secret(Bytes)
 ```
 
-To encrypt and decrypt a value:
+To encrypt and decrypt a binary or list value:
 
 ``` erl
 Encrypted = credentials_obfuscation:encrypt(<<"abc">>).
@@ -39,6 +39,8 @@ credentials_obfuscation:decrypt(Encrypted).
 % => <<"abc">>
 ```
 
+Lists (char lists in Elixir) will be converted to binaries before encryption.
+This means that decrypted values will also be returned as binaries.
 
 ## License and Copyright
 

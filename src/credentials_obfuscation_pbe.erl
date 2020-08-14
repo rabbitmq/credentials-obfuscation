@@ -99,6 +99,8 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
               pos_integer(), iodata() | '$pending-secret', binary()) -> {plaintext, binary()} | {encrypted, binary()}.
 encrypt(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, ClearText) ->
     {plaintext, ClearText};
+encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_list(ClearText) ->
+    encrypt(Cipher, Hash, Iterations, Secret, list_to_binary(ClearText));
 encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) ->
     Salt = crypto:strong_rand_bytes(16),
     Ivec = crypto:strong_rand_bytes(iv_length(Cipher)),
