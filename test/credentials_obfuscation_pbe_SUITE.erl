@@ -9,7 +9,11 @@
 -include_lib("common_test/include/ct.hrl").
 -compile(export_all).
  
-all() -> [encrypt_decrypt, encrypt_decrypt_term].
+all() -> [
+    encrypt_decrypt,
+    encrypt_decrypt_charlist_value,
+    encrypt_decrypt_term
+].
  
 encrypt_decrypt(_Config) ->
     %% Take all available block ciphers.
@@ -24,6 +28,22 @@ encrypt_decrypt(_Config) ->
              [begin
                   Expected = binary:part(Data, 0, Len),
                   Enc = credentials_obfuscation_pbe:encrypt(C, H, Iterations, Secret, Expected),
+                  Expected = iolist_to_binary(credentials_obfuscation_pbe:decrypt(C, H, Iterations, Secret, Enc))
+              end || Len <- lists:seq(0, byte_size(Data))]
+         end || H <- Hashes, C <- Ciphers],
+    ok.
+
+
+encrypt_decrypt_charlist_value(_Config) ->
+    Hashes = credentials_obfuscation_pbe:supported_hashes(),
+    Ciphers = credentials_obfuscation_pbe:supported_ciphers(),
+    _ = [begin
+             Secret = crypto:strong_rand_bytes(16),
+             Iterations = rand:uniform(100),
+             Data = crypto:strong_rand_bytes(64),
+             [begin
+                  Expected = binary:part(Data, 0, Len),
+                  Enc = credentials_obfuscation_pbe:encrypt(C, H, Iterations, Secret, binary_to_list(Expected)),
                   Expected = iolist_to_binary(credentials_obfuscation_pbe:decrypt(C, H, Iterations, Secret, Enc))
               end || Len <- lists:seq(0, byte_size(Data))]
          end || H <- Hashes, C <- Ciphers],
