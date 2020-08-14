@@ -12,6 +12,7 @@
 -compile(export_all).
  
 all() -> [encrypt_decrypt,
+          encrypt_decrypt_char_list_value,
           use_predefined_secret,
           use_cookie_as_secret,
           encryption_happens_only_when_secret_available,
@@ -70,6 +71,14 @@ encrypt_decrypt(_Config) ->
     Encrypted = credentials_obfuscation:encrypt(Credentials),
     ?assertNotEqual(Credentials, Encrypted),
     ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
+    ok.
+
+encrypt_decrypt_char_list_value(_Config) ->
+    Credentials = "guest",
+    Expected = <<"guest">>,
+    Encrypted = credentials_obfuscation:encrypt(Credentials),
+    ?assertNotEqual(Expected, Encrypted),
+    ?assertEqual(Expected, credentials_obfuscation:decrypt(Encrypted)),
     ok.
 
 use_predefined_secret(_Config) ->
