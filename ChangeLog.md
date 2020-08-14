@@ -1,8 +1,18 @@
 # Change Log
 
+## Changes Between 2.2.0 and 2.3.0 (in development)
+
 ## Changes Between 2.1.0 and 2.2.0 (in development)
 
-No changes yet.
+### List Values are Coerced to Binaries
+
+This library works with binary inputs and outputs. Input list values will now be
+converted to binaries automatically for convenience. Decrypted values will always
+be returned as binaries.
+
+For the purpose of credentials, the two types are usually semantically equivalent.
+When that's not the case, we highly recommend using binaries exclusively instead
+of a mix of binaries and lists (Erlang strings).
 
 
 ## Changes Between 2.1.0 and 2.1.1 (July 29h, 2020)
