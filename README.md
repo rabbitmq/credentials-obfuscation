@@ -39,6 +39,9 @@ credentials_obfuscation:decrypt(Encrypted).
 % => <<"abc">>
 ```
 
+Lists (char lists in Elixir) will be converted to binaries before encryption.
+This means that decrypted values will also be returned as binaries.
+
 ## License and Copyright
 
 See [LICENSE](./LICENSE).
