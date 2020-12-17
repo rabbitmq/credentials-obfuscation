@@ -21,9 +21,9 @@
 -endif.
 
 -ifdef(HAS_CRYPTO_INFO_FUNCTIONS).
--define(DEFAULT_CIPHER, aes_256_cbc).
+-define(DEFAULT_CIPHER, aes_128_cbc).
 -else.
--define(DEFAULT_CIPHER, aes_cbc256).
+-define(DEFAULT_CIPHER, aes_cbc128).
 -endif.
 
 %% Supported ciphers and hashes
@@ -70,10 +70,10 @@ default_cipher() ->
     ?DEFAULT_CIPHER.
 
 default_hash() ->
-    sha512.
+    sha256.
 
 default_iterations() ->
-    1000.
+    1.
 
 %% Encryption/decryption of arbitrary Erlang terms.
 

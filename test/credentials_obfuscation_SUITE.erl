@@ -40,10 +40,8 @@ init_per_testcase(encryption_happens_only_when_secret_available, Config) ->
     ok = application:set_env(credentials_obfuscation, enabled, true),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
-    %% use weak cipher, to avoid collision with defaults
-    %% defaults should only grow stronger
-    ok = application:set_env(credentials_obfuscation, cipher, aes_128_cbc),
-    ok = application:set_env(credentials_obfuscation, hash, sha256),
+    ok = application:set_env(credentials_obfuscation, cipher, aes_cbc128),
+    ok = application:set_env(credentials_obfuscation, hash, sha512),
     ok = application:set_env(credentials_obfuscation, iterations, 100),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
     Config;
