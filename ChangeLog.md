@@ -2,6 +2,32 @@
 
 ## Changes Between 2.2.0 and 2.3.0 (in development)
 
+### Defaults for Better Efficiency
+
+The library now uses a weaker cipher suite by default for a significant
+gain in efficiency:
+
+ * AES CBC with a 128-bit key
+ * SHA-256 instead of SHA-512 for hashing
+ * A single iteration instead of 1000
+
+AES CBC with a 128-bit key is a reasonable default
+for this library's use case, in-memory obfuscation of transient process state.
+
+Users who need to use a suite with stronger security
+guarantees, such as AES CBC with a 256-bit key,
+can override the default:
+
+``` erl
+ok = application:set_env(credentials_obfuscation, cipher, aes_cbc256),
+ok = application:set_env(credentials_obfuscation, hash, sha512),
+ok = application:set_env(credentials_obfuscation, iterations, 300).
+```
+
+Contributed by CloudAMQP.
+
+GitHub issue: [#9](https://github.com/rabbitmq/credentials-obfuscation/pull/9)
+
 ## Changes Between 2.1.0 and 2.2.0 (in development)
 
 ### List Values are Coerced to Binaries
