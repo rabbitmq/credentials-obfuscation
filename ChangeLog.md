@@ -1,6 +1,10 @@
 # Change Log
 
-## Changes Between 2.2.0 and 2.3.0 (in development)
+## Changes Between 2.3.0 and 2.4.0 (in development)
+
+No changes yet.
+
+## Changes Between 2.2.0 and 2.3.0 (December 18, 2020)
 
 ### Defaults for Better Efficiency
 
@@ -28,7 +32,7 @@ Contributed by CloudAMQP.
 
 GitHub issue: [#9](https://github.com/rabbitmq/credentials-obfuscation/pull/9)
 
-## Changes Between 2.1.0 and 2.2.0 (in development)
+## Changes Between 2.1.0 and 2.2.0 (August 18, 2020)
 
 ### List Values are Coerced to Binaries
 
