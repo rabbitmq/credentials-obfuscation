@@ -13,22 +13,7 @@
 -export([encrypt_term/5, decrypt_term/5]).
 -export([encrypt/5, decrypt/5]).
 
-%% A lot of ugly code in this module can be removed once we support OTP-22+.
--ifdef(OTP_RELEASE).
--if(?OTP_RELEASE >= 22).
--define(HAS_CRYPTO_INFO_FUNCTIONS, 1).
--endif.
--endif.
-
--ifdef(HAS_CRYPTO_INFO_FUNCTIONS).
--define(DEFAULT_CIPHER, aes_128_cbc).
--else.
--define(DEFAULT_CIPHER, aes_cbc128).
--endif.
-
 %% Supported ciphers and hashes
-
--ifdef(HAS_CRYPTO_INFO_FUNCTIONS).
 
 %% We only support block ciphers that use an initialization vector.
 
@@ -45,29 +30,12 @@ supported_ciphers() ->
     end,
     SupportedByCrypto).
 
--else.
-
-supported_ciphers() ->
-    NotSupportedByUs = [aes_ccm, aes_128_ccm, aes_192_ccm, aes_256_ccm,
-                        aes_gcm, aes_128_gcm, aes_192_gcm, aes_256_gcm,
-                        aes_ecb, aes_128_ecb, aes_192_ecb, aes_256_ecb,
-                        aes_ctr, aes_128_ctr, aes_192_ctr, aes_256_ctr,
-                        chacha20, chacha20_poly1305,
-                        blowfish_ecb, des_ecb, rc4],
-    SupportedByCrypto = proplists:get_value(ciphers, crypto:supports()),
-    lists:filter(fun(Cipher) ->
-        not lists:member(Cipher, NotSupportedByUs)
-    end,
-    SupportedByCrypto).
-
--endif.
-
 supported_hashes() ->
     proplists:get_value(hashs, crypto:supports()).
 
 %% Default encryption parameters.
 default_cipher() ->
-    ?DEFAULT_CIPHER.
+    aes_128_cbc.
 
 default_hash() ->
     sha256.
@@ -146,8 +114,6 @@ unpad(Data) ->
     N = binary:last(Data),
     binary:part(Data, 0, byte_size(Data) - N).
 
--ifdef(HAS_CRYPTO_INFO_FUNCTIONS).
-
 hash_length(Type) ->
     maps:get(size, crypto:hash_info(Type)).
 
@@ -159,92 +125,6 @@ key_length(Type) ->
 
 block_size(Type) ->
     maps:get(block_size, crypto:cipher_info(Type)).
-
--else.
-
-hash_length(md4) -> 16;
-hash_length(md5) -> 16;
-hash_length(ripemd160) -> 20;
-hash_length(sha) -> 20;
-hash_length(sha224) -> 28;
-hash_length(sha3_224) -> 28;
-hash_length(sha256) -> 32;
-hash_length(sha3_256) -> 32;
-hash_length(sha384) -> 48;
-hash_length(sha3_384) -> 48;
-hash_length(sha512) -> 64;
-hash_length(sha3_512) -> 64;
-hash_length(blake2b) -> 64;
-hash_length(blake2s) -> 32.
-
-iv_length(des_cbc) -> 8;
-iv_length(des_cfb) -> 8;
-iv_length(des3_cbc) -> 8;
-iv_length(des3_cbf) -> 8;
-iv_length(des3_cfb) -> 8;
-iv_length(des_ede3) -> 8;
-iv_length(des_ede3_cbf) -> 8;
-iv_length(des_ede3_cfb) -> 8;
-iv_length(des_ede3_cbc) -> 8;
-iv_length(blowfish_cbc) -> 8;
-iv_length(blowfish_cfb64) -> 8;
-iv_length(blowfish_ofb64) -> 8;
-iv_length(rc2_cbc) -> 8;
-iv_length(aes_cbc) -> 16;
-iv_length(aes_cbc128) -> 16;
-iv_length(aes_cfb8) -> 16;
-iv_length(aes_cfb128) -> 16;
-iv_length(aes_cbc256) -> 16;
-iv_length(aes_128_cbc) -> 16;
-iv_length(aes_192_cbc) -> 16;
-iv_length(aes_256_cbc) -> 16;
-iv_length(aes_128_cfb8) -> 16;
-iv_length(aes_192_cfb8) -> 16;
-iv_length(aes_256_cfb8) -> 16;
-iv_length(aes_128_cfb128) -> 16;
-iv_length(aes_192_cfb128) -> 16;
-iv_length(aes_256_cfb128) -> 16;
-iv_length(aes_ige256) -> 32.
-
-key_length(des_cbc) -> 8;
-key_length(des_cfb) -> 8;
-key_length(des3_cbc) -> 24;
-key_length(des3_cbf) -> 24;
-key_length(des3_cfb) -> 24;
-key_length(des_ede3) -> 24;
-key_length(des_ede3_cbf) -> 24;
-key_length(des_ede3_cfb) -> 24;
-key_length(des_ede3_cbc) -> 24;
-key_length(blowfish_cbc) -> 16;
-key_length(blowfish_cfb64) -> 16;
-key_length(blowfish_ofb64) -> 16;
-key_length(rc2_cbc) -> 16;
-key_length(aes_cbc) -> 16;
-key_length(aes_cbc128) -> 16;
-key_length(aes_cfb8) -> 16;
-key_length(aes_cfb128) -> 16;
-key_length(aes_cbc256) -> 32;
-key_length(aes_128_cbc) -> 16;
-key_length(aes_192_cbc) -> 24;
-key_length(aes_256_cbc) -> 32;
-key_length(aes_128_cfb8) -> 16;
-key_length(aes_192_cfb8) -> 24;
-key_length(aes_256_cfb8) -> 32;
-key_length(aes_128_cfb128) -> 16;
-key_length(aes_192_cfb128) -> 24;
-key_length(aes_256_cfb128) -> 32;
-key_length(aes_ige256) -> 16.
-
-block_size(aes_cbc) -> 16;
-block_size(aes_cbc256) -> 16;
-block_size(aes_cbc128) -> 16;
-block_size(aes_128_cbc) -> 16;
-block_size(aes_192_cbc) -> 16;
-block_size(aes_256_cbc) -> 16;
-block_size(aes_ige256) -> 16;
-block_size(_) -> 8.
-
--endif.
 
 %% The following was taken from OTP's lib/public_key/src/pubkey_pbe.erl
 %%
