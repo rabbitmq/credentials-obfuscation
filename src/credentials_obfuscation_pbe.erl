@@ -17,16 +17,11 @@
 
 %% We only support block ciphers that use an initialization vector.
 
-%% @todo ctr_mode ciphers can be supported starting from OTP-22+
-%% without any additional change. stream_cipher ciphers can be
-%% supported starting from OTP-22+ by using the new encrypt/decrypt
-%% functions.
-
 supported_ciphers() ->
     SupportedByCrypto = crypto:supports(ciphers),
     lists:filter(fun(Cipher) ->
         Mode = maps:get(mode, crypto:cipher_info(Cipher)),
-        not lists:member(Mode, [ccm_mode, ctr_mode, ecb_mode, gcm_mode, stream_cipher])
+        not lists:member(Mode, [ccm_mode, ecb_mode, gcm_mode])
     end,
     SupportedByCrypto).
 
