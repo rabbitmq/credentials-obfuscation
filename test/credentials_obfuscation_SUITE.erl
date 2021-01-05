@@ -10,7 +10,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
- 
+
 all() -> [encrypt_decrypt,
           encrypt_decrypt_char_list_value,
           use_predefined_secret,
@@ -40,7 +40,7 @@ init_per_testcase(encryption_happens_only_when_secret_available, Config) ->
     ok = application:set_env(credentials_obfuscation, enabled, true),
     Config;
 init_per_testcase(change_default_cipher, Config) ->
-    ok = application:set_env(credentials_obfuscation, cipher, aes_cbc128),
+    ok = application:set_env(credentials_obfuscation, cipher, aes_256_cbc),
     ok = application:set_env(credentials_obfuscation, hash, sha512),
     ok = application:set_env(credentials_obfuscation, iterations, 100),
     {ok, _} = application:ensure_all_started(credentials_obfuscation),
@@ -63,7 +63,7 @@ end_per_testcase(_TestCase, Config) ->
     end,
     [ok = application:unset_env(credentials_obfuscation, Key) || {Key, _} <- application:get_all_env(credentials_obfuscation)],
     Config.
- 
+
 encrypt_decrypt(_Config) ->
     Credentials = <<"guest">>,
     Encrypted = credentials_obfuscation:encrypt(Credentials),

@@ -31,7 +31,7 @@ supported_ciphers() ->
     SupportedByCrypto).
 
 supported_hashes() ->
-    proplists:get_value(hashs, crypto:supports()).
+    crypto:supports(hashs).
 
 %% Default encryption parameters.
 default_cipher() ->
@@ -63,7 +63,7 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
 %% The encrypt/5 function returns a base64 binary and the decrypt/5
 %% function accepts that same base64 binary.
 
--spec encrypt(crypto:block_cipher(), crypto:hash_algorithms(),
+-spec encrypt(crypto:cipher_iv(), crypto:hash_algorithm(),
               pos_integer(), iodata() | '$pending-secret', binary()) -> {plaintext, binary()} | {encrypted, binary()}.
 encrypt(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, ClearText) ->
     {plaintext, ClearText};
@@ -73,11 +73,11 @@ encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) -
     Salt = crypto:strong_rand_bytes(16),
     Ivec = crypto:strong_rand_bytes(iv_length(Cipher)),
     Key = make_key(Cipher, Hash, Iterations, Secret, Salt),
-    Binary = crypto:block_encrypt(Cipher, Key, Ivec, pad(Cipher, ClearText)),
+    Binary = crypto:crypto_one_time(Cipher, Key, Ivec, pad(Cipher, ClearText), true),
     Encrypted = base64:encode(<<Salt/binary, Ivec/binary, Binary/binary>>),
     {encrypted, Encrypted}.
 
--spec decrypt(crypto:block_cipher(), crypto:hash_algorithms(),
+-spec decrypt(crypto:cipher_iv(), crypto:hash_algorithm(),
               pos_integer(), iodata(), {'encrypted', binary() | [1..255]} | {'plaintext', _}) -> any().
 decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, ClearText}) ->
     ClearText;
@@ -85,13 +85,13 @@ decrypt(Cipher, Hash, Iterations, Secret, {encrypted, Base64Binary}) ->
     IvLength = iv_length(Cipher),
     << Salt:16/binary, Ivec:IvLength/binary, Binary/bits >> = base64:decode(Base64Binary),
     Key = make_key(Cipher, Hash, Iterations, Secret, Salt),
-    unpad(crypto:block_decrypt(Cipher, Key, Ivec, Binary)).
+    unpad(crypto:crypto_one_time(Cipher, Key, Ivec, Binary, false)).
 
 %% Generate a key from a secret.
 
 make_key(Cipher, Hash, Iterations, Secret, Salt) ->
     Key = pbdkdf2(Secret, Salt, Iterations, key_length(Cipher),
-        fun crypto:hmac/4, Hash, hash_length(Hash)),
+        fun hmac/4, Hash, hash_length(Hash)),
     if
         Cipher =:= des3_cbc; Cipher =:= des3_cbf; Cipher =:= des3_cfb;
                 Cipher =:= des_ede3; Cipher =:= des_ede3_cbc;
@@ -101,6 +101,9 @@ make_key(Cipher, Hash, Iterations, Secret, Salt) ->
         true ->
             Key
     end.
+
+hmac(SubType, Key, Data, MacLength) ->
+    crypto:macN(hmac, SubType, Key, Data, MacLength).
 
 %% Functions to pad/unpad input to a multiplier of block size.
 
