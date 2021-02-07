@@ -13,9 +13,15 @@
 -export([encrypt_term/5, decrypt_term/5]).
 -export([encrypt/5, decrypt/5]).
 
+
 %% Supported ciphers and hashes
 
 %% We only support block ciphers that use an initialization vector.
+
+%% AEAD ciphers expect Associated Data (AD), which we don't have. It would be
+%% convenient if there was a way to get this list rather than hardcode it:
+%% https://bugs.erlang.org/browse/ERL-1479.
+-define(AEAD_CIPHERS, [aes_gcm, aes_ccm, chacha20_poly1305]).
 
 supported_ciphers() ->
     SupportedByCrypto = crypto:supports(ciphers),
@@ -23,7 +29,7 @@ supported_ciphers() ->
         Mode = maps:get(mode, crypto:cipher_info(Cipher)),
         not lists:member(Mode, [ccm_mode, ecb_mode, gcm_mode])
     end,
-    SupportedByCrypto).
+    SupportedByCrypto) -- ?AEAD_CIPHERS.
 
 supported_hashes() ->
     crypto:supports(hashs).
