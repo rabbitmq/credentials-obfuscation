@@ -1,8 +1,19 @@
 # Change Log
 
-## Changes Between 2.3.0 and 2.4.0 (in development)
+## Changes Between 2.4.0 and 2.5.0 (unreleased)
 
 No changes yet.
+
+## Changes Between 2.3.0 and 2.4.0 (February 18, 2021)
+
+### Support for Erlang/OTP 24 and the new Crypto API
+
+The library now supports Erlang 24 and drops support for Erlang versions < 22.1.
+
+Contributed by Dominic @dmorneau Morneau.
+
+GitHub issue: [#10].
+
 
 ## Changes Between 2.2.0 and 2.3.0 (December 18, 2020)
 
