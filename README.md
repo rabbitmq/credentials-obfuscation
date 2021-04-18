@@ -10,6 +10,10 @@ the Erlang runtime (`error_logger`).
 Note that this application **cannot protect against heap dumping attacks** and only helps
 avoid sensitive data appearing in log files.
 
+## Supported Erlang/OTP Versions
+
+This library uses the modern `crypto` API and **requires Erlang 22.3 or a later version**.
+
 ## Usage
 
 First, make the `credentials_obfuscation` application a dependency of your project.
