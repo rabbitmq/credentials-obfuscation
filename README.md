@@ -50,4 +50,4 @@ This means that decrypted values will also be returned as binaries.
 
 See [LICENSE](./LICENSE).
 
-(c) 2019-2020 VMware, Inc or its affiliates.
+(c) 2019-2021 VMware, Inc or its affiliates.
