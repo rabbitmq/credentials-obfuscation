@@ -11,7 +11,7 @@
 -export([enabled/0, cipher/0, hash/0, iterations/0, secret/0]).
 
 %% API
--export([set_secret/1, encrypt/1, decrypt/1, refresh_config/0]).
+-export([set_secret/1, set_fallback_secret/1, encrypt/1, decrypt/1, refresh_config/0]).
 
 -spec enabled() -> boolean().
 enabled() ->
@@ -36,6 +36,11 @@ secret() ->
 -spec set_secret(binary()) -> ok.
 set_secret(Secret) when is_binary(Secret) ->
     ok = credentials_obfuscation_svc:set_secret(Secret).
+
+
+-spec set_fallback_secret(binary()) -> ok.
+set_fallback_secret(Secret) when is_binary(Secret) ->
+    ok = credentials_obfuscation_svc:set_fallback_secret(Secret).
 
 -spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
 encrypt(none) -> none;

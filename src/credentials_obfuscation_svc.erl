@@ -16,6 +16,7 @@
          get_config/1,
          refresh_config/0,
          set_secret/1,
+         set_fallback_secret/1,
          encrypt/1,
          decrypt/1]).
 
@@ -31,9 +32,11 @@
                 cipher :: atom(),
                 hash :: atom(),
                 iterations :: non_neg_integer(),
-                secret :: binary() | '$pending-secret'}).
+                secret :: binary() | '$pending-secret',
+                fallback_secret :: binary() | undefined}).
 
 -define(TIMEOUT, 30000).
+-define(VALUE_TAG, credentials_obfuscation).
 
 %%%===================================================================
 %%% API functions
@@ -54,8 +57,13 @@ refresh_config() ->
 set_secret(Secret) when is_binary(Secret) ->
     gen_server:call(?MODULE, {set_secret, Secret}).
 
+-spec set_fallback_secret(binary()) -> ok.
+set_fallback_secret(Secret) when is_binary(Secret) ->
+    gen_server:call(?MODULE, {set_fallback_secret, Secret}).
+
+
 -spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
-encrypt(Term) ->
+encrypt(Term) when is_binary(Term); is_list(Term) ->
     try
         gen_server:call(?MODULE, {encrypt, Term}, ?TIMEOUT)
     catch exit:{timeout, _} ->
@@ -99,19 +107,42 @@ handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
-                                           secret=Secret}=State) ->
-    Encrypted = credentials_obfuscation_pbe:encrypt(Cipher, Hash, Iterations, Secret, Term),
-    {reply, Encrypted, State};
+                                           secret=Secret} = State) ->
+    % We need to wrap the data in a tuple to be able to say if the decryption was 
+    % successful or not. We may just receive junk data if the secret is incorrect
+    % upon decryption.
+    ClearText = {?VALUE_TAG, to_binary(Term)},
+    Encrypted = credentials_obfuscation_pbe:encrypt_term(Cipher, Hash, Iterations, Secret, ClearText),
+    case Encrypted of 
+        {plaintext, _} -> 
+            {reply, {plaintext, Term}, State};
+        _ -> {reply, Encrypted, State}
+    end;
 handle_call({decrypt, Term}, _From, #state{enabled=false}=State) ->
+    {reply, Term, State};
+handle_call({decrypt, {plaintext, Term}}, _From, State) ->
     {reply, Term, State};
 handle_call({decrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
-                                           secret=Secret}=State) ->
-    Decrypted = credentials_obfuscation_pbe:decrypt(Cipher, Hash, Iterations, Secret, Term),
-    {reply, Decrypted, State};
+                                           secret=Secret,
+                                           fallback_secret=FallbackSecret}=State) ->
+    case try_decrypt(Cipher, Hash, Iterations, Secret, Term) of
+        {ok, Decrypted} -> 
+            {reply, Decrypted, State};
+        {error, _E} -> 
+            case try_decrypt(Cipher, Hash, Iterations, FallbackSecret, Term) of 
+                {ok, Decrypted2} -> 
+                    {reply, Decrypted2, State};
+                _E2 -> 
+                    {reply, Term, State}
+            end
+    end;
 handle_call({set_secret, Secret}, _From, State0) ->
     State1 = State0#state{secret = Secret},
+    {reply, ok, State1};
+handle_call({set_fallback_secret, Secret}, _From, State0) ->
+    State1 = State0#state{fallback_secret = Secret},
     {reply, ok, State1}.
 
 handle_cast(_Message, State) ->
@@ -163,3 +194,17 @@ check(Cipher, Hash, Iterations) ->
     E = credentials_obfuscation_pbe:encrypt(Cipher, Hash, Iterations, TempSecret, Value),
     Value = credentials_obfuscation_pbe:decrypt(Cipher, Hash, Iterations, TempSecret, E),
     ok.
+
+try_decrypt(Cipher, Hash, Iterations, Secret, Term) -> 
+    try
+        {?VALUE_TAG, Decrypted} = 
+            credentials_obfuscation_pbe:decrypt_term(Cipher, Hash, Iterations, Secret, Term),
+        {ok, Decrypted}
+    catch 
+        ErrorType:Error:_Stacktrace -> 
+            {error, {ErrorType, Error}}
+    end.
+
+% currently the callers may rely on this process converting strings to binary
+to_binary(Term) when is_list(Term) -> erlang:list_to_binary(Term);
+to_binary(Term) when is_binary(Term) -> Term.
