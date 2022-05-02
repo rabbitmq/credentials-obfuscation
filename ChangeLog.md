@@ -1,6 +1,6 @@
 # Change Log
 
-## Changes Between 2.4.0 and 3.0.0 (unreleased)
+## Changes Between 2.4.0 and 3.0.0 (May 2, 2022)
 
 ### Fallback Secret Support
 
