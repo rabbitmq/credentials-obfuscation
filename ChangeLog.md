@@ -1,8 +1,20 @@
 # Change Log
 
-## Changes Between 2.4.0 and 2.5.0 (unreleased)
+## Changes Between 2.4.0 and 3.0.0 (unreleased)
 
-No changes yet.
+### Fallback Secret Support
+
+An alternative secret now can be provided to be used as fallback.
+This is useful for key migrations (rotations, upgrades, and so on)
+when some stored pieces of state can still use the old key.
+
+Contributed by @luos.
+
+GitHub issue: [rabbitmq/credentials-obfuscation#15](https://github.com/rabbitmq/credentials-obfuscation/pull/15)
+
+### Support for Erlang/OTP 25
+
+The library supports Erlang 25 and drops support for Erlang versions < 22.3.
 
 ## Changes Between 2.3.0 and 2.4.0 (February 18, 2021)
 
