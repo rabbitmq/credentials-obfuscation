@@ -15,6 +15,8 @@ all() -> [encrypt_decrypt,
           encrypt_decrypt_char_list_value,
           use_predefined_secret,
           use_cookie_as_secret,
+          change_of_secret_returns_passed_in_data,
+          fallback_secret,
           encryption_happens_only_when_secret_available,
           change_default_cipher,
           disabled,
@@ -100,6 +102,35 @@ use_cookie_as_secret(_Config) ->
     ok = credentials_obfuscation:set_secret(CookieBin),
     ?assertEqual(CookieBin, credentials_obfuscation:secret()),
     ok = net_kernel:stop(),
+    ok.
+
+%% change of secret should not crash the credentials_obfuscation_svc process
+change_of_secret_returns_passed_in_data(_Config) ->
+    Secret1 = crypto:strong_rand_bytes(128),
+    Secret2 = crypto:strong_rand_bytes(128),
+    Uri = <<"amqp://super:secret@localhost:5672">>,
+    ok = credentials_obfuscation:set_secret(Secret1),
+    Encrypted = credentials_obfuscation:encrypt(Uri),
+    ok = credentials_obfuscation:set_secret(Secret2),
+    ?assertEqual(Encrypted, credentials_obfuscation:decrypt(Encrypted)),
+    ok.
+
+fallback_secret(_Config) -> 
+    Secret1 = crypto:strong_rand_bytes(128),
+    Secret2 = crypto:strong_rand_bytes(128),
+    Uri = <<"amqp://super:secret@localhost:5672">>,
+    ok = credentials_obfuscation:set_secret(Secret1),
+    Encrypted = credentials_obfuscation:encrypt(Uri),
+
+    ok = credentials_obfuscation:set_secret(Secret2),
+    Encrypted2 = credentials_obfuscation:encrypt(Uri),
+
+    ?assertEqual(Encrypted, credentials_obfuscation:decrypt(Encrypted)),
+
+    ok = credentials_obfuscation:set_fallback_secret(Secret1),
+    
+    ?assertEqual(Uri, credentials_obfuscation:decrypt(Encrypted)),
+    ?assertEqual(Uri, credentials_obfuscation:decrypt(Encrypted2)),
     ok.
 
 encryption_happens_only_when_secret_available(_Config) ->
