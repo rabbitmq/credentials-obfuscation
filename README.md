@@ -44,7 +44,11 @@ credentials_obfuscation:decrypt(Encrypted).
 ```
 
 Lists (char lists in Elixir) will be converted to binaries before encryption.
-This means that decrypted values will also be returned as binaries.
+This means that decrypted values will alwyas be returned as binaries.
+
+Lists here mean "byte lists", that is Unicode characters are not
+supported. This should still be sufficient for encryption of
+URIs, generated credentials, and many kinds of sensitive identifiers.
 
 ## License and Copyright
 

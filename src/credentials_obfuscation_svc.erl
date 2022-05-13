@@ -62,7 +62,7 @@ set_fallback_secret(Secret) when is_binary(Secret) ->
     gen_server:call(?MODULE, {set_fallback_secret, Secret}).
 
 
--spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
+-spec encrypt(iodata()) -> {plaintext, binary()} | {encrypted, binary()} | binary().
 encrypt(Term) when is_binary(Term); is_list(Term) ->
     try
         gen_server:call(?MODULE, {encrypt, Term}, ?TIMEOUT)
@@ -72,13 +72,13 @@ encrypt(Term) when is_binary(Term); is_list(Term) ->
             %% but might be to some. There is no right or wrong answer to whether
             %% availability or security are more important, so the users have to decide
             %% whether using {plaintext, Term} results is appropriate in their specific case.
-            {plaintext, Term};
+            {plaintext, to_binary(Term)};
           _:_ ->
             %% see above
-            {plaintext, Term}
+            {plaintext, to_binary(Term)}
     end.
 
--spec decrypt({plaintext, term()} | {encrypted, binary()}) -> term().
+-spec decrypt({plaintext, binary()} | {encrypted, binary()}) -> binary().
 decrypt(Term) ->
     gen_server:call(?MODULE, {decrypt, Term}, ?TIMEOUT).
 
@@ -103,7 +103,7 @@ handle_call(refresh_config, _From, State0) ->
     {ok, State1} = refresh_config(State0),
     {reply, ok, State1};
 handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
-    {reply, Term, State};
+    {reply, to_binary(Term), State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
@@ -113,9 +113,9 @@ handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
     % upon decryption.
     ClearText = {?VALUE_TAG, to_binary(Term)},
     Encrypted = credentials_obfuscation_pbe:encrypt_term(Cipher, Hash, Iterations, Secret, ClearText),
-    case Encrypted of 
-        {plaintext, _} -> 
-            {reply, {plaintext, Term}, State};
+    case Encrypted of
+        {plaintext, {?VALUE_TAG, Bin}} ->
+            {reply, {plaintext, Bin}, State};
         _ -> {reply, Encrypted, State}
     end;
 handle_call({decrypt, Term}, _From, #state{enabled=false}=State) ->
