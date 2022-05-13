@@ -42,13 +42,15 @@ set_secret(Secret) when is_binary(Secret) ->
 set_fallback_secret(Secret) when is_binary(Secret) ->
     ok = credentials_obfuscation_svc:set_fallback_secret(Secret).
 
--spec encrypt(term()) -> {plaintext, term()} | {encrypted, binary()}.
+-spec encrypt(none | undefined) -> none | undefined;
+             (iodata()) -> {plaintext, binary()} | {encrypted, binary()}.
 encrypt(none) -> none;
 encrypt(undefined) -> undefined;
 encrypt(Term) ->
     credentials_obfuscation_svc:encrypt(Term).
 
--spec decrypt({plaintext, term()} | {encrypted, binary()}) -> term().
+-spec decrypt(none | undefined) -> none | undefined;
+             ({plaintext, binary()} | {encrypted, binary()}) -> binary().
 decrypt(none) -> none;
 decrypt(undefined) -> undefined;
 decrypt(Term) ->

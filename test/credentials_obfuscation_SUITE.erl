@@ -147,6 +147,12 @@ encryption_happens_only_when_secret_available(_Config) ->
     ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri),
     ?assertEqual(Uri, credentials_obfuscation:decrypt(NotReallyEncryptedUri)),
 
+    %% Strings are converted to binaries even if no secret available
+    UriStr = "amqp://super:secret@localhost:5672",
+    NotReallyEncryptedUri2 = credentials_obfuscation:encrypt(UriStr),
+    ?assertEqual({plaintext, Uri}, NotReallyEncryptedUri2),
+    ?assertEqual(Uri, credentials_obfuscation:decrypt(NotReallyEncryptedUri2)),
+
     %% Start epmd
     os:cmd("epmd -daemon"),
 
@@ -180,6 +186,11 @@ disabled(_Config) ->
     ?assertNot(credentials_obfuscation:enabled()),
     Credentials = <<"guest">>,
     ?assertEqual(Credentials, credentials_obfuscation:encrypt(Credentials)),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Credentials)),
+
+    %% Strings are converted to binaries even if no secret available
+    CredentialsStr = "guest",
+    ?assertEqual(Credentials, credentials_obfuscation:encrypt(CredentialsStr)),
     ?assertEqual(Credentials, credentials_obfuscation:decrypt(Credentials)),
     ok.
 
