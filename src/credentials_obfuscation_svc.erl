@@ -63,19 +63,20 @@ set_fallback_secret(Secret) when is_binary(Secret) ->
 
 
 -spec encrypt(iodata()) -> {plaintext, binary()} | {encrypted, binary()} | binary().
-encrypt(Term) when is_binary(Term); is_list(Term) ->
+encrypt(Term) ->
+    Bin = to_binary(Term),
     try
-        gen_server:call(?MODULE, {encrypt, Term}, ?TIMEOUT)
+        gen_server:call(?MODULE, {encrypt, Bin}, ?TIMEOUT)
     catch exit:{timeout, _} ->
             %% We treat timeouts the same way we do other "encryption is impossible"
             %% scenarios: return the original value. This won't be acceptable to every user
             %% but might be to some. There is no right or wrong answer to whether
             %% availability or security are more important, so the users have to decide
             %% whether using {plaintext, Term} results is appropriate in their specific case.
-            {plaintext, to_binary(Term)};
+            {plaintext, Bin};
           _:_ ->
             %% see above
-            {plaintext, to_binary(Term)}
+            {plaintext, Bin}
     end.
 
 -spec decrypt({plaintext, binary()} | {encrypted, binary()}) -> binary().
@@ -103,7 +104,7 @@ handle_call(refresh_config, _From, State0) ->
     {ok, State1} = refresh_config(State0),
     {reply, ok, State1};
 handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
-    {reply, to_binary(Term), State};
+    {reply, Term, State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
@@ -111,11 +112,11 @@ handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
     % We need to wrap the data in a tuple to be able to say if the decryption was 
     % successful or not. We may just receive junk data if the secret is incorrect
     % upon decryption.
-    ClearText = {?VALUE_TAG, to_binary(Term)},
+    ClearText = {?VALUE_TAG, Term},
     Encrypted = credentials_obfuscation_pbe:encrypt_term(Cipher, Hash, Iterations, Secret, ClearText),
     case Encrypted of
-        {plaintext, {?VALUE_TAG, Bin}} ->
-            {reply, {plaintext, Bin}, State};
+        {plaintext, {?VALUE_TAG, Term}} ->
+            {reply, {plaintext, Term}, State};
         _ -> {reply, Encrypted, State}
     end;
 handle_call({decrypt, Term}, _From, #state{enabled=false}=State) ->
@@ -206,5 +207,11 @@ try_decrypt(Cipher, Hash, Iterations, Secret, Term) ->
     end.
 
 % currently the callers may rely on this process converting strings to binary
-to_binary(Term) when is_list(Term) -> erlang:list_to_binary(Term);
-to_binary(Term) when is_binary(Term) -> Term.
+to_binary(Term) ->
+    try
+        iolist_to_binary(Term)
+    catch
+        _:_ ->
+            %% `none' prevents the  argument from appearing in the stackstrace
+            erlang:error(badarg, none)
+    end.
