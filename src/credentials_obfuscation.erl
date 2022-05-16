@@ -56,6 +56,6 @@ decrypt(undefined) -> undefined;
 decrypt(Term) ->
     credentials_obfuscation_svc:decrypt(Term).
 
--spec refresh_config() -> ok.
+-spec refresh_config() -> ok | {error, invalid_config}.
 refresh_config() ->
     credentials_obfuscation_svc:refresh_config().

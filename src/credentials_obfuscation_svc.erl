@@ -49,7 +49,7 @@ start_link() ->
 get_config(Config) ->
     gen_server:call(?MODULE, {get_config, Config}).
 
--spec refresh_config() -> ok.
+-spec refresh_config() -> ok | {error, invalid_config}.
 refresh_config() ->
     gen_server:call(?MODULE, refresh_config).
 
@@ -101,8 +101,12 @@ handle_call({get_config, iterations}, _From, #state{iterations=Iterations}=State
 handle_call({get_config, secret}, _From, #state{secret=Secret}=State) ->
     {reply, Secret, State};
 handle_call(refresh_config, _From, State0) ->
-    {ok, State1} = refresh_config(State0),
-    {reply, ok, State1};
+    try refresh_config(State0) of
+        State1 ->
+            {reply, ok, State1}
+    catch _:_ ->
+            {reply, {error, invalid_config}, State0}
+    end;
 handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
     {reply, Term, State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
@@ -168,16 +172,15 @@ init_state() ->
     {ok, State}.
 
 -spec refresh_config(#state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}) ->
-    {'ok', #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}}.
+    #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}.
 refresh_config(#state{secret=Secret}=State0) ->
     {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
     ok = case Enabled of
              true -> check(Cipher, Hash, Iterations);
              false -> ok
          end,
-    State1 = State0#state{enabled = Enabled, cipher = Cipher, hash = Hash,
-                          iterations = Iterations, secret = Secret},
-    {ok, State1}.
+    State0#state{enabled = Enabled, cipher = Cipher, hash = Hash,
+                 iterations = Iterations, secret = Secret}.
 
 get_config_values() ->
     Enabled = application:get_env(credentials_obfuscation, enabled, true),

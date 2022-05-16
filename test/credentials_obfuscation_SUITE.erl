@@ -22,6 +22,7 @@ all() -> [encrypt_decrypt,
           change_default_cipher,
           disabled,
           refresh_configuration,
+          refresh_configuration_invalid_cipher,
           application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
@@ -222,6 +223,26 @@ refresh_configuration(_Config) ->
     Value = <<"foobarbazbat">>,
     ?assertEqual(Value, credentials_obfuscation:encrypt(Value)),
     ?assertEqual(Value, credentials_obfuscation:decrypt(Value)),
+    ok.
+
+refresh_configuration_invalid_cipher(_Config) ->
+    ?assert(credentials_obfuscation:enabled()),
+
+    Cipher = credentials_obfuscation:cipher(),
+
+    Credentials = <<"guest">>,
+    Encrypted = credentials_obfuscation:encrypt(Credentials),
+    ?assertNotEqual(Credentials, Encrypted),
+    ?assertMatch({encrypted, _}, Encrypted),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
+
+    %% try to load invalid config
+    ok = application:set_env(credentials_obfuscation, cipher, dummy_cipher),
+    ?assertEqual({error, invalid_config}, credentials_obfuscation:refresh_config()),
+
+    %% cipher is unchanged and encrypting still works
+    ?assertEqual(Cipher, credentials_obfuscation:cipher()),
+    ?assertMatch({encrypted, _}, credentials_obfuscation:encrypt(Credentials)),
     ok.
 
 application_failure_for_invalid_cipher(_Config) ->
