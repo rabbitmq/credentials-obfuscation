@@ -49,7 +49,7 @@ start_link() ->
 get_config(Config) ->
     gen_server:call(?MODULE, {get_config, Config}).
 
--spec refresh_config() -> ok.
+-spec refresh_config() -> ok | {error, invalid_config}.
 refresh_config() ->
     gen_server:call(?MODULE, refresh_config).
 
@@ -63,19 +63,20 @@ set_fallback_secret(Secret) when is_binary(Secret) ->
 
 
 -spec encrypt(iodata()) -> {plaintext, binary()} | {encrypted, binary()} | binary().
-encrypt(Term) when is_binary(Term); is_list(Term) ->
+encrypt(Term) ->
+    Bin = to_binary(Term),
     try
-        gen_server:call(?MODULE, {encrypt, Term}, ?TIMEOUT)
+        gen_server:call(?MODULE, {encrypt, Bin}, ?TIMEOUT)
     catch exit:{timeout, _} ->
             %% We treat timeouts the same way we do other "encryption is impossible"
             %% scenarios: return the original value. This won't be acceptable to every user
             %% but might be to some. There is no right or wrong answer to whether
             %% availability or security are more important, so the users have to decide
             %% whether using {plaintext, Term} results is appropriate in their specific case.
-            {plaintext, to_binary(Term)};
+            {plaintext, Bin};
           _:_ ->
             %% see above
-            {plaintext, to_binary(Term)}
+            {plaintext, Bin}
     end.
 
 -spec decrypt({plaintext, binary()} | {encrypted, binary()}) -> binary().
@@ -100,10 +101,14 @@ handle_call({get_config, iterations}, _From, #state{iterations=Iterations}=State
 handle_call({get_config, secret}, _From, #state{secret=Secret}=State) ->
     {reply, Secret, State};
 handle_call(refresh_config, _From, State0) ->
-    {ok, State1} = refresh_config(State0),
-    {reply, ok, State1};
+    try refresh_config(State0) of
+        State1 ->
+            {reply, ok, State1}
+    catch _:_ ->
+            {reply, {error, invalid_config}, State0}
+    end;
 handle_call({encrypt, Term}, _From, #state{enabled=false}=State) ->
-    {reply, to_binary(Term), State};
+    {reply, Term, State};
 handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
                                            hash=Hash,
                                            iterations=Iterations,
@@ -111,11 +116,11 @@ handle_call({encrypt, Term}, _From, #state{cipher=Cipher,
     % We need to wrap the data in a tuple to be able to say if the decryption was 
     % successful or not. We may just receive junk data if the secret is incorrect
     % upon decryption.
-    ClearText = {?VALUE_TAG, to_binary(Term)},
+    ClearText = {?VALUE_TAG, Term},
     Encrypted = credentials_obfuscation_pbe:encrypt_term(Cipher, Hash, Iterations, Secret, ClearText),
     case Encrypted of
-        {plaintext, {?VALUE_TAG, Bin}} ->
-            {reply, {plaintext, Bin}, State};
+        {plaintext, {?VALUE_TAG, Term}} ->
+            {reply, {plaintext, Term}, State};
         _ -> {reply, Encrypted, State}
     end;
 handle_call({decrypt, Term}, _From, #state{enabled=false}=State) ->
@@ -167,16 +172,15 @@ init_state() ->
     {ok, State}.
 
 -spec refresh_config(#state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}) ->
-    {'ok', #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}}.
+    #state{enabled::boolean(), cipher::atom(), hash::atom(), iterations::non_neg_integer(), secret::'$pending-secret' | binary()}.
 refresh_config(#state{secret=Secret}=State0) ->
     {ok, Enabled, Cipher, Hash, Iterations} = get_config_values(),
     ok = case Enabled of
              true -> check(Cipher, Hash, Iterations);
              false -> ok
          end,
-    State1 = State0#state{enabled = Enabled, cipher = Cipher, hash = Hash,
-                          iterations = Iterations, secret = Secret},
-    {ok, State1}.
+    State0#state{enabled = Enabled, cipher = Cipher, hash = Hash,
+                 iterations = Iterations, secret = Secret}.
 
 get_config_values() ->
     Enabled = application:get_env(credentials_obfuscation, enabled, true),
@@ -206,5 +210,11 @@ try_decrypt(Cipher, Hash, Iterations, Secret, Term) ->
     end.
 
 % currently the callers may rely on this process converting strings to binary
-to_binary(Term) when is_list(Term) -> erlang:list_to_binary(Term);
-to_binary(Term) when is_binary(Term) -> Term.
+to_binary(Term) ->
+    try
+        iolist_to_binary(Term)
+    catch
+        _:_ ->
+            %% `none' prevents the  argument from appearing in the stackstrace
+            erlang:error(badarg, none)
+    end.

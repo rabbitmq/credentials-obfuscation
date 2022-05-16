@@ -13,6 +13,7 @@
 
 all() -> [encrypt_decrypt,
           encrypt_decrypt_char_list_value,
+          encrypt_decrypt_invalid_char_list_value,
           use_predefined_secret,
           use_cookie_as_secret,
           change_of_secret_returns_passed_in_data,
@@ -21,6 +22,7 @@ all() -> [encrypt_decrypt,
           change_default_cipher,
           disabled,
           refresh_configuration,
+          refresh_configuration_invalid_cipher,
           application_failure_for_invalid_cipher].
 
 init_per_testcase(disabled, Config) ->
@@ -79,6 +81,25 @@ encrypt_decrypt_char_list_value(_Config) ->
     Encrypted = credentials_obfuscation:encrypt(Credentials),
     ?assertNotEqual(Expected, Encrypted),
     ?assertEqual(Expected, credentials_obfuscation:decrypt(Encrypted)),
+    ok.
+
+encrypt_decrypt_invalid_char_list_value(_Config) ->
+    InvalidCredentials = "guest " ++ [128557],
+    Secret = credentials_obfuscation:secret(),
+    ?assert(is_binary(Secret)),
+
+    Result =
+        try
+            credentials_obfuscation:encrypt(InvalidCredentials),
+            ok
+        catch
+            C:E:ST ->
+                {C, E, ST}
+        end,
+    %% bad argument is not present in stacktrace
+    ?assertMatch({error, badarg, [{credentials_obfuscation_svc, to_binary, 1, _}|_]}, Result),
+    %% ensure the server did not crash and preserved original secret
+    ?assertEqual(Secret, credentials_obfuscation:secret()),
     ok.
 
 use_predefined_secret(_Config) ->
@@ -202,6 +223,26 @@ refresh_configuration(_Config) ->
     Value = <<"foobarbazbat">>,
     ?assertEqual(Value, credentials_obfuscation:encrypt(Value)),
     ?assertEqual(Value, credentials_obfuscation:decrypt(Value)),
+    ok.
+
+refresh_configuration_invalid_cipher(_Config) ->
+    ?assert(credentials_obfuscation:enabled()),
+
+    Cipher = credentials_obfuscation:cipher(),
+
+    Credentials = <<"guest">>,
+    Encrypted = credentials_obfuscation:encrypt(Credentials),
+    ?assertNotEqual(Credentials, Encrypted),
+    ?assertMatch({encrypted, _}, Encrypted),
+    ?assertEqual(Credentials, credentials_obfuscation:decrypt(Encrypted)),
+
+    %% try to load invalid config
+    ok = application:set_env(credentials_obfuscation, cipher, dummy_cipher),
+    ?assertEqual({error, invalid_config}, credentials_obfuscation:refresh_config()),
+
+    %% cipher is unchanged and encrypting still works
+    ?assertEqual(Cipher, credentials_obfuscation:cipher()),
+    ?assertMatch({encrypted, _}, credentials_obfuscation:encrypt(Credentials)),
     ok.
 
 application_failure_for_invalid_cipher(_Config) ->
