@@ -11,19 +11,29 @@
 
 -compile(export_all).
 
-all() -> [encrypt_decrypt,
-          encrypt_decrypt_char_list_value,
-          encrypt_decrypt_invalid_char_list_value,
-          use_predefined_secret,
-          use_cookie_as_secret,
-          change_of_secret_returns_passed_in_data,
-          fallback_secret,
-          encryption_happens_only_when_secret_available,
-          change_default_cipher,
-          disabled,
-          refresh_configuration,
-          refresh_configuration_invalid_cipher,
-          application_failure_for_invalid_cipher].
+all() ->
+    AllTests = [encrypt_decrypt,
+                encrypt_decrypt_char_list_value,
+                encrypt_decrypt_invalid_char_list_value,
+                use_predefined_secret,
+                use_cookie_as_secret,
+                change_of_secret_returns_passed_in_data,
+                fallback_secret,
+                encryption_happens_only_when_secret_available,
+                change_default_cipher,
+                disabled,
+                refresh_configuration,
+                refresh_configuration_invalid_cipher,
+                application_failure_for_invalid_cipher],
+    case {os:getenv("GITHUB_ACTIONS"), os:type()} of
+        {false, _} ->
+            AllTests;
+        {_, {win32, _}} ->
+            ct:pal("skipping some tests on GitHub actions on Windows"),
+            Tests0 = lists:delete(use_cookie_as_secret, AllTests),
+            Tests1 = lists:delete(encryption_happens_only_when_secret_available, Tests0),
+            Tests1
+    end.
 
 init_per_testcase(disabled, Config) ->
     ok = application:set_env(credentials_obfuscation, enabled, false),
@@ -122,8 +132,7 @@ use_cookie_as_secret(_Config) ->
     CookieBin = atom_to_binary(Cookie, utf8),
     ok = credentials_obfuscation:set_secret(CookieBin),
     ?assertEqual(CookieBin, credentials_obfuscation:secret()),
-    ok = net_kernel:stop(),
-    ok.
+    ok = net_kernel:stop().
 
 %% change of secret should not crash the credentials_obfuscation_svc process
 change_of_secret_returns_passed_in_data(_Config) ->
@@ -190,8 +199,7 @@ encryption_happens_only_when_secret_available(_Config) ->
     {encrypted, _} = EncryptedUri,
     ?assertEqual(Uri, credentials_obfuscation:decrypt(EncryptedUri)),
 
-    ok = net_kernel:stop(),
-    ok.
+    ok = net_kernel:stop().
 
 change_default_cipher(_Config) ->
     ?assertNotEqual(credentials_obfuscation_pbe:default_cipher(), credentials_obfuscation:cipher()),
