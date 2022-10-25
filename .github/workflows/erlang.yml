@@ -1,34 +1,24 @@
-name: Test
+name: credentials-obfuscation
 on: push
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        otp:
-        - "23.3"
-        - "24.3"
+        otp_version: [23, 24, 25]
+        os: [ubuntu-latest, windows-latest]
     steps:
-    - name: CHECKOUT
-      uses: actions/checkout@v2
-    - name: CONFIGURE ERLANG
-      uses: erlef/setup-beam@v1
+    - uses: actions/checkout@v3
+    - uses: erlef/setup-beam@v1
       with:
-        otp-version: ${{ matrix.otp }}
-    - name: Deps
-      run: rebar3 get-deps
-    - name: Compile
-      run: rebar3 compile
-    - name: Dialyze
-      run: rebar3 dialyzer
-    - name: EUnit
-      run: rebar3 eunit
-    - name: Common Test
-      run: rebar3 ct
-    - name: Capture Test Logs on Failure
-      uses: actions/upload-artifact@v2-preview
+        otp-version: ${{ matrix.otp_version }}
+        rebar3-version: '3'
+    - run: rebar3 compile
+    - run: rebar3 dialyzer
+    - run: rebar3 eunit
+    - run: rebar3 ct --verbose --verbosity=3 --readable=true
+    - uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: ct-logs-${{matrix.otp}}
-        path: logs/*
+        name: ct-logs-${{matrix.os}}-${{matrix.otp_version}}
+        path: _build/test/logs
