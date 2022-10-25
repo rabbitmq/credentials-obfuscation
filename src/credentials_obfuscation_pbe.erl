@@ -91,7 +91,7 @@ decrypt(Cipher, Hash, Iterations, Secret, {encrypted, Base64Binary}) ->
 %% Generate a key from a secret.
 
 make_key(Cipher, Hash, Iterations, Secret, Salt) ->
-    Key = pbdkdf2(Secret, Salt, Iterations, key_length(Cipher),
+    Key = pubkey_pbe:pbdkdf2(Secret, Salt, Iterations, key_length(Cipher),
         fun hmac/4, Hash, hash_length(Hash)),
     if
         Cipher =:= des3_cbc; Cipher =:= des3_cbf; Cipher =:= des3_cfb;
@@ -129,42 +129,3 @@ key_length(Type) ->
 
 block_size(Type) ->
     maps:get(block_size, crypto:cipher_info(Type)).
-
-%% The following was taken from OTP's lib/public_key/src/pubkey_pbe.erl
-%%
-%% This is an undocumented interface to password-based encryption algorithms.
-%% These functions have been copied here to stay compatible with R16B03.
-
-%%--------------------------------------------------------------------
--spec pbdkdf2(iodata(), iodata(), integer(), integer(), fun(), atom(), integer())
-	     -> binary().
-%%
-%% Description: Implements password based decryption key derive function 2.
-%% Exported mainly for testing purposes.
-%%--------------------------------------------------------------------
-pbdkdf2(Password, Salt, Count, DerivedKeyLen, Prf, PrfHash, PrfOutputLen)->
-    NumBlocks = ceiling(DerivedKeyLen / PrfOutputLen),
-    NumLastBlockOctets = DerivedKeyLen - (NumBlocks - 1) * PrfOutputLen ,
-    blocks(NumBlocks, NumLastBlockOctets, 1, Password, Salt,
-	   Count, Prf, PrfHash, PrfOutputLen, <<>>).
-
-blocks(1, N, Index, Password, Salt, Count, Prf, PrfHash, PrfLen, Acc) ->
-    <<XorSum:N/binary, _/binary>> = xor_sum(Password, Salt, Count, Index, Prf, PrfHash, PrfLen),
-    <<Acc/binary, XorSum/binary>>;
-blocks(NumBlocks, N, Index, Password, Salt, Count, Prf, PrfHash, PrfLen, Acc) ->
-    XorSum = xor_sum(Password, Salt, Count, Index, Prf, PrfHash, PrfLen),
-    blocks(NumBlocks -1, N, Index +1, Password, Salt, Count, Prf, PrfHash,
-	   PrfLen, <<Acc/binary, XorSum/binary>>).
-
-xor_sum(Password, Salt, Count, Index, Prf, PrfHash, PrfLen) ->
-    Result = Prf(PrfHash, Password, [Salt,<<Index:32/unsigned-big-integer>>], PrfLen),
-    do_xor_sum(Prf, PrfHash, PrfLen, Result, Password, Count-1, Result).
-
-do_xor_sum(_, _, _, _, _, 0, Acc) ->
-    Acc;
-do_xor_sum(Prf, PrfHash, PrfLen, Prev, Password, Count, Acc) ->
-    Result = Prf(PrfHash, Password, Prev, PrfLen),
-    do_xor_sum(Prf, PrfHash, PrfLen, Result, Password, Count-1, crypto:exor(Acc, Result)).
-
-ceiling(Float) ->
-    erlang:round(Float + 0.5).
