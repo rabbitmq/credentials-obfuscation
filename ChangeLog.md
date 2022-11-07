@@ -1,5 +1,9 @@
 # Change Log
 
+## Changes between 3.1.0 and 3.2.0 (Nov 7, 2022)
+
+GitHub milestone: [link](https://github.com/rabbitmq/credentials-obfuscation/milestone/8closed=1)
+
 ## Changes Between 2.4.0 and 3.0.0 (May 2, 2022)
 
 ### Fallback Secret Support
