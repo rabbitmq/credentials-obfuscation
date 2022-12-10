@@ -12,7 +12,7 @@ avoid sensitive data appearing in log files.
 
 ## Supported Erlang/OTP Versions
 
-This library uses the modern `crypto` API and **requires Erlang 22.3 or a later version**.
+This library uses the modern `crypto` API and **requires Erlang 23.2 or a later version**.
 
 ## Usage
 
