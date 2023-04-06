@@ -12,6 +12,7 @@
 %% This cipher is listed as supported on macOS, but doesn't actually work.
 %% OTP bug: https://bugs.erlang.org/browse/ERL-1478
 -define(SKIPPED_CIPHERS, [aes_ige256]).
+-define(SKIPPED_HASHES, [shake128, shake256]).
 
 all() -> [
     encrypt_decrypt,
@@ -21,7 +22,7 @@ all() -> [
 
 encrypt_decrypt(_Config) ->
     %% Take all available block ciphers.
-    Hashes = credentials_obfuscation_pbe:supported_hashes(),
+    Hashes = credentials_obfuscation_pbe:supported_hashes() -- ?SKIPPED_HASHES,
     Ciphers = credentials_obfuscation_pbe:supported_ciphers() -- ?SKIPPED_CIPHERS,
     %% For each cipher, try to encrypt and decrypt data sizes from 0 to 64 bytes
     %% with a random Secret.
@@ -39,7 +40,7 @@ encrypt_decrypt(_Config) ->
 
 
 encrypt_decrypt_charlist_value(_Config) ->
-    Hashes = credentials_obfuscation_pbe:supported_hashes(),
+    Hashes = credentials_obfuscation_pbe:supported_hashes() -- ?SKIPPED_HASHES,
     Ciphers = credentials_obfuscation_pbe:supported_ciphers() -- ?SKIPPED_CIPHERS,
     _ = [begin
              Secret = crypto:strong_rand_bytes(16),
@@ -55,7 +56,7 @@ encrypt_decrypt_charlist_value(_Config) ->
 
 encrypt_decrypt_term(_Config) ->
     %% Take all available block ciphers.
-    Hashes = credentials_obfuscation_pbe:supported_hashes(),
+    Hashes = credentials_obfuscation_pbe:supported_hashes() -- ?SKIPPED_HASHES,
     Ciphers = credentials_obfuscation_pbe:supported_ciphers() -- ?SKIPPED_CIPHERS,
     %% Different Erlang terms to try encrypting.
     DataSet = [
