@@ -8,6 +8,7 @@
 -module(credentials_obfuscation_pbe).
 
 -include("credentials_obfuscation.hrl").
+-include("otp_crypto.hrl").
 
 -export([supported_ciphers/0, supported_hashes/0, default_cipher/0, default_hash/0, default_iterations/0]).
 -export([encrypt_term/5, decrypt_term/5]).
@@ -64,7 +65,7 @@ decrypt_term(Cipher, Hash, Iterations, Secret, Base64Binary) ->
 %% The encrypt/5 function returns a base64 binary and the decrypt/5
 %% function accepts that same base64 binary.
 
--spec encrypt(crypto:cipher_iv(), crypto:hash_algorithm(),
+-spec encrypt(cipher_iv(), hash_algorithm(),
               pos_integer(), iodata() | '$pending-secret', iodata()) -> {plaintext, binary()} | {encrypted, binary()}.
 encrypt(_Cipher, _Hash, _Iterations, ?PENDING_SECRET, ClearText) ->
     {plaintext, iolist_to_binary(ClearText)};
@@ -78,7 +79,7 @@ encrypt(Cipher, Hash, Iterations, Secret, ClearText) when is_binary(ClearText) -
     Encrypted = base64:encode(<<Salt/binary, Ivec/binary, Binary/binary>>),
     {encrypted, Encrypted}.
 
--spec decrypt(crypto:cipher_iv(), crypto:hash_algorithm(),
+-spec decrypt(cipher_iv(), hash_algorithm(),
               pos_integer(), iodata(), {'encrypted', binary() | [1..255]} | {'plaintext', _}) -> any().
 decrypt(_Cipher, _Hash, _Iterations, _Secret, {plaintext, ClearText}) ->
     ClearText;
