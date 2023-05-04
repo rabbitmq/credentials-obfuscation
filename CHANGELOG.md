@@ -1,5 +1,14 @@
 # Changelog
 
+## [v3.4.0](https://github.com/rabbitmq/credentials-obfuscation/tree/v3.4.0) (2023-05-04)
+
+[Full Changelog](https://github.com/rabbitmq/credentials-obfuscation/compare/v3.3.0...v3.4.0)
+
+- Copy paste some crypto type definitions from OTP to make dialyzer happy
+- Exclude `shake128` and `shake256` (new hashing algorithms introduced in OTP26) from the tests as they don't support what we do
+- Add OTP26 to CI
+- Remove OTP23 from CI
+
 ## [v3.3.0](https://github.com/rabbitmq/credentials-obfuscation/tree/v3.3.0) (2023-03-04)
 
 [Full Changelog](https://github.com/rabbitmq/credentials-obfuscation/compare/v3.2.0...v3.3.0)
@@ -12,8 +21,6 @@
 
 - Update README.md [\#24](https://github.com/rabbitmq/credentials-obfuscation/pull/24) ([L1nY4n](https://github.com/L1nY4n))
 - Include rebar3\_hex in project\_plugins, not plugins [\#23](https://github.com/rabbitmq/credentials-obfuscation/pull/23) ([newmanjeff](https://github.com/newmanjeff))
-
-# Change Log
 
 ## Changes between 3.1.0 and 3.2.0 (Nov 7, 2022)
 
