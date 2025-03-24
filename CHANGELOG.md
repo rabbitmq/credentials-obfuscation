@@ -1,5 +1,19 @@
 # Changelog
 
+## [v3.5.0](https://github.com/rabbitmq/credentials-obfuscation/tree/v3.5.0) (2025-03-24)
+
+[Full Changelog](https://github.com/rabbitmq/credentials-obfuscation/compare/v3.4.0...v3.5.0)
+
+**Implemented enhancements:**
+
+- Add cuttlefish schema [\#28](https://github.com/rabbitmq/credentials-obfuscation/issues/28)
+
+**Merged pull requests:**
+
+- Prepare for v3.5.0 [\#34](https://github.com/rabbitmq/credentials-obfuscation/pull/34) ([lukebakken](https://github.com/lukebakken))
+- Remove defaults and unset if undefined [\#30](https://github.com/rabbitmq/credentials-obfuscation/pull/30) ([SimonUnge](https://github.com/SimonUnge))
+- Add schema file [\#29](https://github.com/rabbitmq/credentials-obfuscation/pull/29) ([SimonUnge](https://github.com/SimonUnge))
+
 ## [v3.4.0](https://github.com/rabbitmq/credentials-obfuscation/tree/v3.4.0) (2023-05-04)
 
 [Full Changelog](https://github.com/rabbitmq/credentials-obfuscation/compare/v3.3.0...v3.4.0)
