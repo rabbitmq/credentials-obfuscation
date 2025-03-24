@@ -28,11 +28,14 @@ all() ->
     case {os:getenv("GITHUB_ACTIONS"), os:type()} of
         {false, _} ->
             AllTests;
+        {true, {unix, _}} ->
+            AllTests;
         {_, {win32, _}} ->
-            ct:pal("skipping some tests on GitHub actions on Windows"),
-            Tests0 = lists:delete(use_cookie_as_secret, AllTests),
-            Tests1 = lists:delete(encryption_happens_only_when_secret_available, Tests0),
-            Tests1
+            % ct:pal("skipping some tests on GitHub actions on Windows"),
+            % Tests0 = lists:delete(use_cookie_as_secret, AllTests),
+            % Tests1 = lists:delete(encryption_happens_only_when_secret_available, Tests0),
+            % Tests1
+            AllTests
     end.
 
 init_per_testcase(disabled, Config) ->
@@ -123,7 +126,7 @@ use_cookie_as_secret(_Config) ->
     ?assertEqual(nocookie, erlang:get_cookie()),
 
     %% Start epmd
-    os:cmd("epmd -daemon"),
+    os:cmd("erl -boot no_dot_erlang -sname epmd-starter -noinput -s erlang halt"),
 
     {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),
     Cookie = erlang:get_cookie(),
@@ -184,7 +187,7 @@ encryption_happens_only_when_secret_available(_Config) ->
     ?assertEqual(Uri, credentials_obfuscation:decrypt(NotReallyEncryptedUri2)),
 
     %% Start epmd
-    os:cmd("epmd -daemon"),
+    os:cmd("erl -boot no_dot_erlang -sname epmd-starter -noinput -s erlang halt"),
 
     % start up disterl, which creates a cookie
     {ok, _} = net_kernel:start(['use_cookie_as_secret@localhost']),

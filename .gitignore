@@ -2,6 +2,7 @@
 rebar3.crashdump
 _*
 .eunit
+.tool-versions
 *.o
 *.beam
 *.plt
